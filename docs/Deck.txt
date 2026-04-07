@@ -1,0 +1,96 @@
+FROM POOL
+Magitek Armor
+Adventurer's Airship
+Irontread Crusher
+Aradara Express
+Rolling Hamsphere
+Mobilizer Mech
+Guidelight Matrix
+
+Raise the Alarm
+Aerith Rescue Mission
+White Sun's Zenith
+Martial Coup
+
+Doomed Traveler
+Dwarven Castle Guard
+Sparring Mummy
+Pilgrim's Eye
+Ornithopter of Paradise
+Millikin
+
+Weapons Vendor
+Paladin's Arms
+Stalactite Dagger
+
+Flickerwisp
+Restoration Angel
+Semester's End
+Personify
+Sun Titan
+Coin of Fate
+
+Tome of Legends
+Mask of Memory
+Deep Analysis
+Behold the Multiverse
+Chart a Course
+Compulsive Research
+Think Twice
+Impulse
+Anticipate
+
+Swords to Plowshares
+Generous Gift
+Return to Dust
+Disenchant
+Counterspell
+Mana Leak
+Essence Scatter
+Exclude
+Blink of an Eye
+Into the Roil
+Echoing Truth
+Leadership Vacuum
+
+Dive Down
+Valorous Stance
+Cloud Cover
+
+Sol Ring
+Mind Stone
+Thran Dynamo
+Commander's Sphere
+Wayfarer's Bauble
+
+Command Tower
+Tranquil Cove
+Evolving Wilds
+Terramorphic Expanse
+Field of Ruin
+Demolition Field
+Rogue's Passage
+Reliquary Tower
+8 Plains
+8 Island
+
+
+FROM OTHER DECK
+Smuggler's Copter
+Reckoner Bankbuster
+Aethersphere Harvester
+Skysovereign, Consul Flagship
+Surgehacker Mech
+Cultivator's Caravan
+Unlicensed Hearse
+Untethered Express
+Weatherlight Compleated
+Parhelion II
+
+Lightning Greaves
+Swiftfoot Boots
+
+Arcane Signet
+Fellwar Stone
+
+Buried Ruin
