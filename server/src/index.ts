@@ -66,8 +66,8 @@ if (isProduction) {
 
 const PORT = Number(process.env.PORT) || 3001;
 
-console.log(
-  `Server running on http://localhost:${PORT} (${isProduction ? "production" : "development"})`
-);
-
-serve({ fetch: app.fetch, port: PORT });
+const server = serve({ fetch: app.fetch, port: PORT }, (info) => {
+  console.log(
+    `Server running on http://localhost:${info.port} (${isProduction ? "production" : "development"})`
+  );
+});
