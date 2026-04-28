@@ -1,96 +1,64 @@
-FROM POOL
-Magitek Armor
-Adventurer's Airship
-Irontread Crusher
-Aradara Express
-Rolling Hamsphere
-Mobilizer Mech
-Guidelight Matrix
+1 Aethersnipe
+1 Arcane Signet
+1 Behold the Multiverse
+1 Bitter Triumph
+1 Blink of an Eye
+1 Buried Ruin
+1 Chainer's Edict
+1 Chart a Course
+1 Chimil, the Inner Sun
+1 Command Tower
+1 Commander's Sphere
+1 Condescend
+1 Consider
+1 Cremate
+1 Darkwater Catacombs
+1 Deadeye Navigator
+1 Deep Analysis
+1 Dimir Aqueduct
+1 Dismal Backwater
+1 Echoing Truth
+1 Essence Scatter
+1 Evolving Wilds
+1 Exclude
+1 Exotic Orchard
+1 Fact or Fiction
+1 Fellwar Stone
+1 Forbidden Alchemy
+1 Impulse
+1 Innocent Blood
+1 Into the Roil
+12 Island
+1 Last Gasp
+1 Lonely Sandbar
+1 Mask of Memory
+1 Mind Stone
+1 Mulldrifter
+1 Murder
+1 Negate
+1 Nephalia Seakite
+1 Opt
+1 Path of Ancestry
+1 Preordain
+1 Prismatic Lens
+1 Reliquary Tower
+1 Silent Departure
+1 Skinrender
+1 Sleight of Hand
+1 Sol Ring
+1 Solve the Equation
+1 Spell Snare
+13 Swamp
+1 Swiftfoot Boots
+1 Temporal Cleansing
+1 Terramorphic Expanse
+1 Think Twice
+1 Thran Dynamo
+1 Tolarian Terror
+1 Treasure Cruise
+1 Treno, Dark City
+1 Unlicensed Hearse
+1 Unsummon
+1 Wayfarer's Bauble
 
-Raise the Alarm
-Aerith Rescue Mission
-White Sun's Zenith
-Martial Coup
-
-Doomed Traveler
-Dwarven Castle Guard
-Sparring Mummy
-Pilgrim's Eye
-Ornithopter of Paradise
-Millikin
-
-Weapons Vendor
-Paladin's Arms
-Stalactite Dagger
-
-Flickerwisp
-Restoration Angel
-Semester's End
-Personify
-Sun Titan
-Coin of Fate
-
-Tome of Legends
-Mask of Memory
-Deep Analysis
-Behold the Multiverse
-Chart a Course
-Compulsive Research
-Think Twice
-Impulse
-Anticipate
-
-Swords to Plowshares
-Generous Gift
-Return to Dust
-Disenchant
-Counterspell
-Mana Leak
-Essence Scatter
-Exclude
-Blink of an Eye
-Into the Roil
-Echoing Truth
-Leadership Vacuum
-
-Dive Down
-Valorous Stance
-Cloud Cover
-
-Sol Ring
-Mind Stone
-Thran Dynamo
-Commander's Sphere
-Wayfarer's Bauble
-
-Command Tower
-Tranquil Cove
-Evolving Wilds
-Terramorphic Expanse
-Field of Ruin
-Demolition Field
-Rogue's Passage
-Reliquary Tower
-8 Plains
-8 Island
-
-
-FROM OTHER DECK
-Smuggler's Copter
-Reckoner Bankbuster
-Aethersphere Harvester
-Skysovereign, Consul Flagship
-Surgehacker Mech
-Cultivator's Caravan
-Unlicensed Hearse
-Untethered Express
-Weatherlight Compleated
-Parhelion II
-
-Lightning Greaves
-Swiftfoot Boots
-
-Arcane Signet
-Fellwar Stone
-
-Buried Ruin
+1 Sephiroth, Planet's Heir
