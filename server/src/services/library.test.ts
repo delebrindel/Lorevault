@@ -115,4 +115,39 @@ describe("getOwnedLibrary", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(10);
     expect(library.size).toBe(10);
   });
+
+  it("groups multiple printings of the same name into one OwnedCard", async () => {
+    fetchSpy.mockResolvedValue(
+      pageResponse([
+        makeItem({ name: "Sol Ring" }, 1, "sol-cmd"),
+        makeItem({ name: "Sol Ring" }, 2, "sol-2xm"),
+        makeItem({ name: "Lightning Bolt" }, 4, "bolt-m11"),
+      ]),
+    );
+
+    const { library } = await getOwnedLibrary({ token: TOKEN, ttlMs: 0 });
+
+    expect(library.size).toBe(2);
+    const sol = library.get("Sol Ring")!;
+    expect(sol.printings).toHaveLength(2);
+    expect(sol.totalQty).toBe(3);
+    expect(library.get("Lightning Bolt")!.totalQty).toBe(4);
+  });
+
+  it("treats DFC // and Alchemy A- names as distinct keys", async () => {
+    fetchSpy.mockResolvedValue(
+      pageResponse([
+        makeItem({ name: "Delver of Secrets // Insectile Aberration" }),
+        makeItem({ name: "A-Lightning Bolt" }),
+        makeItem({ name: "Lightning Bolt" }),
+      ]),
+    );
+
+    const { library } = await getOwnedLibrary({ token: TOKEN, ttlMs: 0 });
+
+    expect(library.size).toBe(3);
+    expect(library.has("Delver of Secrets // Insectile Aberration")).toBe(true);
+    expect(library.has("A-Lightning Bolt")).toBe(true);
+    expect(library.has("Lightning Bolt")).toBe(true);
+  });
 });
