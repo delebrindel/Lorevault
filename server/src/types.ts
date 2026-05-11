@@ -56,3 +56,19 @@ export const MTG_COLORS: Record<MtgColor, string> = {
   R: "Red",
   G: "Green",
 };
+
+/**
+ * A single owned card, identified by name, with all printings/finishes the user owns.
+ * `totalQty` = sum of `quantity` across all `printings`.
+ */
+export interface OwnedCard {
+  name: string;
+  printings: CollectionItem[];
+  totalQty: number;
+}
+
+/**
+ * The entire owned collection grouped by card name (case-sensitive, exact match).
+ * Key = `OwnedCard.name`. DFC `//` and Alchemy `A-` prefixes are treated as distinct.
+ */
+export type OwnedLibrary = Map<string, OwnedCard>;
