@@ -6,3 +6,4 @@ dist
 *.vue.js
 *.log
 docs/*
+.worktrees/
