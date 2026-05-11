@@ -2,6 +2,7 @@ import type { CollectionItem, CollectionResponse, OwnedCard, OwnedLibrary } from
 
 const MOXFIELD_API = "https://api2.moxfield.com/v1/collections/search";
 const PAGE_SIZE = 5000;
+const MAX_PAGES = 10;
 
 /** Thrown when Moxfield returns a non-OK response or invalid payload. */
 export class MoxfieldError extends Error {
@@ -115,6 +116,17 @@ function groupByName(items: CollectionItem[]): OwnedLibrary {
 }
 
 export async function getOwnedLibrary(opts: GetOwnedLibraryOptions): Promise<OwnedLibraryResult> {
+  const all: CollectionItem[] = [];
   const first = await fetchPage(opts.token, 1);
-  return { library: groupByName(first.data), totalResults: first.totalResults };
+  all.push(...first.data);
+  let totalResults = first.totalResults;
+
+  const lastPage = Math.min(first.totalPages, MAX_PAGES);
+  for (let page = 2; page <= lastPage; page++) {
+    const next = await fetchPage(opts.token, page);
+    all.push(...next.data);
+    totalResults = next.totalResults;
+  }
+
+  return { library: groupByName(all), totalResults };
 }

@@ -87,4 +87,32 @@ describe("getOwnedLibrary", () => {
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers.Authorization).toBe(`Bearer ${TOKEN}`);
   });
+
+  it("walks all pages until totalPages is reached", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(pageResponse([makeItem({ name: "Card A" })], 3, 3))
+      .mockResolvedValueOnce(pageResponse([makeItem({ name: "Card B" }, 2)], 3, 3))
+      .mockResolvedValueOnce(pageResponse([makeItem({ name: "Card C" })], 3, 3));
+
+    const { library, totalResults } = await getOwnedLibrary({ token: TOKEN, ttlMs: 0 });
+
+    expect(library.size).toBe(3);
+    expect(library.get("Card A")!.totalQty).toBe(1);
+    expect(library.get("Card B")!.totalQty).toBe(2);
+    expect(library.get("Card C")!.totalQty).toBe(1);
+    expect(totalResults).toBe(3);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("stops at MAX_PAGES even if totalPages is higher", async () => {
+    fetchSpy.mockImplementation(async () => {
+      const idx = fetchSpy.mock.calls.length;
+      return pageResponse([makeItem({ name: `Card ${idx}` })], 999, 999);
+    });
+
+    const { library } = await getOwnedLibrary({ token: TOKEN, ttlMs: 0 });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(10);
+    expect(library.size).toBe(10);
+  });
 });
