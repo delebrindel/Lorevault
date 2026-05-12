@@ -4,7 +4,7 @@
 
 Lorevault is a Commander-focused web app for exploring your collection today while laying the groundwork for transparent, collection-aware deck analysis.
 
-It pairs a Vue client with a Hono + TypeScript server, using Moxfield for collection and deck import data, and Scryfall as the canonical source for public card lookup.
+It pairs a Vue client with a Hono + TypeScript server, using Moxfield for collection and deck import data, and Scryfall as the canonical source for public card lookup. The backend analyzer can now parse, resolve, and score Commander decks with live CRISPI output for the implemented axes.
 
 ## What Lorevault does today
 
@@ -13,22 +13,23 @@ It pairs a Vue client with a Hono + TypeScript server, using Moxfield for collec
 - Import Commander decks from Moxfield deck URLs or IDs on the server
 - Parse manual decklists into a normalized deck shape
 - Resolve deck cards against your owned library first, then Scryfall fallback data
-- Prepare deck-resolution data for the upcoming analyzer pipeline
+- Score resolved decks through `POST /api/deck/score`
+- Return live CRISPI reports with implemented `Consistency` and `Resilience` axes
 
 ## Coming soon
 
-- Transparent Commander deck analysis
-- CRISPI scoring (Consistency, Resilience, Interaction, Speed)
-- Per-card evidence and drill-downs
+- Remaining CRISPI axes: `Interaction` and `Speed`
+- Richer analyzer heuristics, evidence, and archetype detection
+- Analyzer UI built on top of the parse / resolve / score APIs
 - Collection-aware upgrade suggestions
-- Analyzer UI built on top of the new deck parsing and resolution APIs
 
 ## Roadmap
 
-- Finish the first analyzer-facing deck workflow
-- Add deck scoring and evidence views
-- Expand the client beyond collection browsing into a full analyzer experience
+- Finish the backend CRISPI engine by implementing `Interaction` and `Speed`
+- Improve backend heuristics such as richer archetype detection and deeper card tagging
+- Add analyzer score and evidence views in the client
 - Build collection-aware recommendation features on top of resolved deck data
+- See the full roadmap in [ROADMAP.md](./ROADMAP.md)
 
 ## Quick local start
 
@@ -57,6 +58,11 @@ npm run dev
 This starts:
 - the API server on `http://localhost:3001`
 - the Vite client on `http://localhost:5173`
+
+Current backend analyzer endpoints:
+- `POST /api/deck/parse`
+- `POST /api/deck/resolve`
+- `POST /api/deck/score`
 
 ## Smoke testing
 
@@ -111,7 +117,9 @@ npm run smoke:tail -- 200
 
 ## Development
 
-For setup details, architecture notes, scripts, and current implementation status, see [DEVELOPMENT.md](./DEVELOPMENT.md).
+For setup details, architecture notes, and current implementation status, see [DEVELOPMENT.md](./DEVELOPMENT.md).
+
+For milestone planning and upcoming backend/client work, see [ROADMAP.md](./ROADMAP.md).
 
 ## Repository
 

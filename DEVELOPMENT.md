@@ -11,8 +11,8 @@ Lorevault is a split frontend/backend application:
 
 Current focus:
 - collection filtering
-- deck parsing and resolution
-- analyzer groundwork for future Commander insights
+- deck parsing, resolution, and scoring
+- backend-first analyzer slices for transparent Commander insights
 
 ## Prerequisites
 
@@ -188,6 +188,8 @@ This covers:
 - `/api/deck/parse`
 - `/api/deck/resolve`
 
+Note: the current smoke runner does not yet probe `/api/deck/score`.
+
 ## Current architecture
 
 ### Data-source policy
@@ -227,6 +229,18 @@ Lorevault uses this project-wide source-of-truth split:
   3. Scryfall fuzzy fallback
 - returns resolved commander/mainboard entries plus an ownership map
 
+#### Deck scoring
+- `POST /api/deck/score`
+- accepts a JSON-serialized `ResolvedDeck`
+- normalizes `ownedMap` back into a `Map`
+- returns a full `CrispiReport`
+- currently implements:
+  - `Consistency`
+  - `Resilience`
+- currently stubs:
+  - `Interaction`
+  - `Speed`
+
 ## Current implementation status
 
 ### Implemented
@@ -238,12 +252,18 @@ Lorevault uses this project-wide source-of-truth split:
 - deck resolver orchestrator
 - `/api/deck/parse`
 - `/api/deck/resolve`
+- `/api/deck/score`
+- CRISPI analyzer report types
+- archetype detector stub
+- consistency tagger and scorer slice
+- resilience tagger and scorer slice
 - route mounting in the server entrypoint
 
 ### In progress / next
+- interaction scorer slice
+- speed scorer slice
+- richer archetype detection
 - analyzer UI
-- CRISPI scoring engine
-- card tagging/archetype detection
 - collection-aware recommendations
 
 ## Useful files
@@ -265,10 +285,15 @@ Lorevault uses this project-wide source-of-truth split:
 
 ### Planning docs
 - `docs/superpowers/specs/2026-05-11-commander-deck-analyzer-design.md`
+- `docs/superpowers/specs/2026-05-12-phase-1d-resilience-slice-design.md`
 - `docs/superpowers/plans/2026-05-11-phase-1a-data-layer.md`
 - `docs/superpowers/plans/2026-05-11-phase-1b-deck-resolver.md`
+- `docs/superpowers/plans/2026-05-12-phase-1c-crispi-consistency-slice.md`
+- `docs/superpowers/plans/2026-05-12-phase-1d-resilience-slice.md`
 
 ## Notes
 
 - In local development, the Vite client proxies `/api` to the server on port `3001`.
 - The server currently requires `MOXFIELD_TOKEN` at startup.
+- The backend analyzer is ahead of the client UI right now: scoring routes exist before the analyzer views do.
+- See `ROADMAP.md` for the higher-level milestone view.
