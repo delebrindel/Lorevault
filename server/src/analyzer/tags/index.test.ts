@@ -66,4 +66,24 @@ describe("tagCard", () => {
     expect(landTutor.tutorScore).toBe(0.5);
     expect(broadTutor.tutorScore).toBe(1.5);
   });
+
+  it("merges resilience helper signals into tagCard output", () => {
+    const tags = tagCard(makeCard("Heroic Intervention", {
+      type: "Instant",
+      type_line: "Instant",
+      oracle_text: "Permanents you control gain hexproof and indestructible until end of turn.",
+    }));
+    expect(tags.protectionSpellScore).toBeGreaterThan(0);
+    expect(tags.boardwipeSurvivalScore).toBeGreaterThan(0);
+    expect(tags.reasons).toContain("protection: spell-based protection");
+  });
+
+  it("still keeps counterspells out of protection.spells", () => {
+    const tags = tagCard(makeCard("Counterspell", {
+      type: "Instant",
+      type_line: "Instant",
+      oracle_text: "Counter target spell.",
+    }));
+    expect(tags.protectionSpellScore).toBe(0);
+  });
 });
