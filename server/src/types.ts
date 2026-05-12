@@ -72,3 +72,29 @@ export interface OwnedCard {
  * Key = `OwnedCard.name`. DFC `//` and Alchemy `A-` prefixes are treated as distinct.
  */
 export type OwnedLibrary = Map<string, OwnedCard>;
+
+/**
+ * A deck after input parsing but before card-name resolution.
+ * `commander` holds 1 name, or 2 if partner / background / friends-forever.
+ * `unresolved` is parser-level: lines the parser could not tokenize at all.
+ * Card-resolution failures live on `ResolvedDeck.unresolved`, not here.
+ */
+export interface ParsedDeck {
+  source: "moxfield" | "manual";
+  commander: string[];
+  mainboard: { name: string; qty: number }[];
+  unresolved: string[];
+}
+
+/**
+ * A deck after every name has been mapped to a `Card`.
+ * `commander` and `mainboard` contain only successful resolutions.
+ * `unresolved` lists names neither the owned library nor Moxfield could resolve.
+ * `ownedMap` reports owned quantity per `scryfall_id` for quick "do I own this?" lookups.
+ */
+export interface ResolvedDeck {
+  commander: Card[];
+  mainboard: { card: Card; qty: number }[];
+  unresolved: string[];
+  ownedMap: Map<string, number>;
+}
