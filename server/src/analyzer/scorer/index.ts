@@ -1,5 +1,6 @@
 import type { ResolvedDeck } from "../../types.js";
 import { detectArchetype } from "../archetype/detect.js";
+import { scoreConsistency } from "./consistency.js";
 import type { Archetype, AxisReport, CrispiReport, Grade } from "../types.js";
 
 function gradeFromScore(score: number): Grade {
@@ -40,7 +41,11 @@ export function scoreDeck(
   deck: ResolvedDeck,
   opts: { archetypeOverride?: Archetype } = {},
 ): CrispiReport {
-  const consistency = makeStubAxis();
+  const detected = opts.archetypeOverride
+    ? { archetype: opts.archetypeOverride }
+    : detectArchetype(deck);
+
+  const consistency = scoreConsistency(deck, detected.archetype);
   const resilience = makeStubAxis();
   const interaction = makeStubAxis();
   const speed = makeStubAxis();
@@ -48,10 +53,6 @@ export function scoreDeck(
   const overall = Math.round((
     consistency.score + resilience.score + interaction.score + speed.score
   ) / 4);
-
-  const detected = opts.archetypeOverride
-    ? { archetype: opts.archetypeOverride }
-    : detectArchetype(deck);
 
   return {
     overall,
