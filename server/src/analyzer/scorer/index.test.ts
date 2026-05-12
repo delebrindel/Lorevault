@@ -45,9 +45,7 @@ describe("scoreDeck", () => {
     const report = scoreDeck(makeDeck(), { archetypeOverride: "control" });
 
     expect(report.axes.consistency.grade).toBeDefined();
-    expect(report.axes.resilience.notes).toEqual([
-      "Not implemented yet in this backend slice.",
-    ]);
+    expect(report.axes.resilience.grade).toBeDefined();
     expect(report.axes.interaction.notes).toEqual([
       "Not implemented yet in this backend slice.",
     ]);
@@ -61,14 +59,15 @@ describe("scoreDeck", () => {
     expect(Number.isNaN(Date.parse(report.generatedAt))).toBe(false);
   });
 
-  it("keeps the full-report contract while only consistency is implemented", () => {
+  it("keeps the full-report contract while consistency and resilience are implemented", () => {
     const report = scoreDeck(makeDeck(), { archetypeOverride: "control" });
 
     expect(report.axes.consistency.subMetrics.length).toBeGreaterThan(0);
-    expect(report.axes.consistency.score).toBeGreaterThanOrEqual(0);
-    expect(report.axes.resilience.score).toBe(0);
+    expect(report.axes.resilience.subMetrics.length).toBeGreaterThan(0);
     expect(report.axes.interaction.score).toBe(0);
     expect(report.axes.speed.score).toBe(0);
-    expect(report.overall).toBe(Math.round(report.axes.consistency.score / 4));
+    expect(report.overall).toBe(
+      Math.round((report.axes.consistency.score + report.axes.resilience.score) / 4),
+    );
   });
 });
