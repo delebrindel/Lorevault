@@ -199,3 +199,21 @@ export async function fetchMoxfieldDeck(opts: {
     unresolved: [],
   };
 }
+
+/**
+ * Top-level entry point. Returns a fully-tagged `ParsedDeck`.
+ * `token` is required for `source: "moxfield"` and ignored for `source: "manual"`.
+ */
+export async function parseDeck(opts: {
+  source: "moxfield" | "manual";
+  payload: string;
+  token: string;
+}): Promise<ParsedDeck> {
+  if (opts.source === "manual") {
+    const result = parseManualDecklist(opts.payload);
+    return { source: "manual", ...result };
+  }
+
+  const result = await fetchMoxfieldDeck({ idOrUrl: opts.payload, token: opts.token });
+  return { source: "moxfield", ...result };
+}

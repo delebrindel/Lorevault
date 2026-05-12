@@ -3,6 +3,7 @@ import {
   parseManualDecklist,
   extractMoxfieldDeckId,
   fetchMoxfieldDeck,
+  parseDeck,
 } from "./deck-parser.js";
 
 describe("parseManualDecklist", () => {
@@ -257,5 +258,47 @@ describe("fetchMoxfieldDeck", () => {
     await expect(
       fetchMoxfieldDeck({ idOrUrl: "https://example.com/foo", token: "tok" }),
     ).rejects.toMatchObject({ name: "MoxfieldError", status: 400 });
+  });
+});
+
+describe("parseDeck", () => {
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  it("dispatches manual source to the text parser and tags source", async () => {
+    const result = await parseDeck({ source: "manual", payload: "1 Sol Ring\n", token: "tok" });
+    expect(result.source).toBe("manual");
+    expect(result.mainboard).toEqual([{ name: "Sol Ring", qty: 1 }]);
+  });
+
+  it("does not call fetch for manual source", async () => {
+    await parseDeck({ source: "manual", payload: "1 Sol Ring\n", token: "tok" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("dispatches moxfield source to the deck fetcher and tags source", async () => {
+    fetchSpy.mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          boards: {
+            commanders: { cards: { a: { quantity: 1, card: { name: "Atraxa, Praetors' Voice" } } } },
+            mainboard: { cards: { b: { quantity: 1, card: { name: "Sol Ring" } } } },
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const result = await parseDeck({ source: "moxfield", payload: "abc123", token: "tok" });
+    expect(result.source).toBe("moxfield");
+    expect(result.commander).toEqual(["Atraxa, Praetors' Voice"]);
+    expect(result.mainboard).toEqual([{ name: "Sol Ring", qty: 1 }]);
   });
 });
