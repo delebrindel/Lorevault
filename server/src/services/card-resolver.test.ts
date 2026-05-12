@@ -40,11 +40,53 @@ function libraryWith(...cards: Card[]): OwnedLibrary {
   return lib;
 }
 
-function searchResponse(cards: Card[]): Response {
-  return new Response(JSON.stringify({ hasMore: false, totalCards: cards.length, data: cards, ownedCards: [] }), {
-    status: 200,
-    headers: { "content-type": "application/json" },
-  });
+function scryfallCardResponse(overrides: Record<string, unknown> & { name: string }): Response {
+  return new Response(
+    JSON.stringify({
+      object: "card",
+      id: "sf-id",
+      oracle_id: "oracle-id",
+      set: "set",
+      set_name: "Set Name",
+      collector_number: "1",
+      layout: "normal",
+      cmc: 1,
+      type_line: "Artifact",
+      oracle_text: "",
+      mana_cost: "{1}",
+      colors: [],
+      color_identity: [],
+      rarity: "common",
+      prices: {
+        usd: "1.23",
+        usd_foil: null,
+        eur: "2.34",
+        eur_foil: null,
+        tix: "0.05",
+      },
+      ...overrides,
+      name: overrides.name,
+    }),
+    {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    },
+  );
+}
+
+function scryfallNotFound(name: string): Response {
+  return new Response(
+    JSON.stringify({
+      object: "error",
+      code: "not_found",
+      status: 404,
+      details: `No cards found matching “${name}”`,
+    }),
+    {
+      status: 404,
+      headers: { "content-type": "application/json" },
+    },
+  );
 }
 
 describe("resolveCard", () => {
@@ -68,41 +110,44 @@ describe("resolveCard", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("falls back to Moxfield card-search on library miss", async () => {
-    const sol = makeCard({ name: "Sol Ring" });
-    fetchSpy.mockImplementation(async () => searchResponse([sol]));
+  it("falls back to Scryfall exact lookup on library miss", async () => {
+    fetchSpy.mockImplementation(async () => scryfallCardResponse({ name: "Sol Ring" }));
 
     const result = await resolveCard("Sol Ring", { library: new Map(), token: TOKEN });
+
     expect(result?.name).toBe("Sol Ring");
+    expect(result?.uniqueCardId).toBe("oracle-id");
+    expect(result?.scryfall_id).toBe("sf-id");
+    expect(result?.prices.usd).toBe(1.23);
     expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(String(fetchSpy.mock.calls[0]![0])).toContain("https://api.scryfall.com/cards/named?exact=Sol%20Ring");
   });
 
-  it("prefers an exact name match when the API returns multiple results", async () => {
-    const exact = makeCard({ name: "Lightning Bolt", scryfall_id: "exact" });
-    const fuzzy = makeCard({ name: "Lightning Helix", scryfall_id: "fuzzy" });
-    fetchSpy.mockImplementation(async () => searchResponse([fuzzy, exact]));
+  it("falls back to Scryfall fuzzy lookup when exact lookup 404s", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(scryfallNotFound("Sol Ringg"))
+      .mockResolvedValueOnce(scryfallCardResponse({ name: "Sol Ring" }));
 
-    const result = await resolveCard("Lightning Bolt", { library: new Map(), token: TOKEN });
-    expect(result?.scryfall_id).toBe("exact");
+    const result = await resolveCard("Sol Ringg", { library: new Map(), token: TOKEN });
+
+    expect(result?.name).toBe("Sol Ring");
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(String(fetchSpy.mock.calls[0]![0])).toContain("exact=Sol%20Ringg");
+    expect(String(fetchSpy.mock.calls[1]![0])).toContain("fuzzy=Sol%20Ringg");
   });
 
-  it("falls back to the first result when no exact match", async () => {
-    const a = makeCard({ name: "Alpha", scryfall_id: "first" });
-    fetchSpy.mockImplementation(async () => searchResponse([a]));
+  it("returns null when exact and fuzzy lookups both 404", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(scryfallNotFound("Made Up Card"))
+      .mockResolvedValueOnce(scryfallNotFound("Made Up Card"));
 
-    const result = await resolveCard("Different Name", { library: new Map(), token: TOKEN });
-    expect(result?.scryfall_id).toBe("first");
-  });
-
-  it("returns null when the API returns an empty result set", async () => {
-    fetchSpy.mockImplementation(async () => searchResponse([]));
     const result = await resolveCard("Made Up Card", { library: new Map(), token: TOKEN });
     expect(result).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   it("caches positive results across calls (no second fetch)", async () => {
-    const sol = makeCard({ name: "Sol Ring" });
-    fetchSpy.mockImplementation(async () => searchResponse([sol]));
+    fetchSpy.mockImplementation(async () => scryfallCardResponse({ name: "Sol Ring" }));
 
     await resolveCard("Sol Ring", { library: new Map(), token: TOKEN });
     await resolveCard("Sol Ring", { library: new Map(), token: TOKEN });
@@ -110,21 +155,24 @@ describe("resolveCard", () => {
   });
 
   it("caches negative results across calls (no second fetch)", async () => {
-    fetchSpy.mockImplementation(async () => searchResponse([]));
-    await resolveCard("Made Up", { library: new Map(), token: TOKEN });
-    await resolveCard("Made Up", { library: new Map(), token: TOKEN });
-    expect(fetchSpy).toHaveBeenCalledOnce();
-  });
+    fetchSpy
+      .mockResolvedValueOnce(scryfallNotFound("Made Up"))
+      .mockResolvedValueOnce(scryfallNotFound("Made Up"));
 
-  it("propagates MoxfieldError(401) on auth failure", async () => {
-    fetchSpy.mockResolvedValue(new Response("nope", { status: 401, statusText: "Unauthorized" }));
-    await expect(
-      resolveCard("Sol Ring", { library: new Map(), token: TOKEN }),
-    ).rejects.toMatchObject({ name: "MoxfieldError", status: 401 });
+    await resolveCard("Made Up", { library: new Map(), token: TOKEN });
+    await resolveCard("Made Up", { library: new Map(), token: TOKEN });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   it("propagates MoxfieldError(502) on server error", async () => {
     fetchSpy.mockResolvedValue(new Response("nope", { status: 500, statusText: "Server Error" }));
+    await expect(
+      resolveCard("Sol Ring", { library: new Map(), token: TOKEN }),
+    ).rejects.toMatchObject({ name: "MoxfieldError", status: 502 });
+  });
+
+  it("propagates MoxfieldError(502) on invalid JSON", async () => {
+    fetchSpy.mockResolvedValue(new Response("not json", { status: 200, statusText: "OK" }));
     await expect(
       resolveCard("Sol Ring", { library: new Map(), token: TOKEN }),
     ).rejects.toMatchObject({ name: "MoxfieldError", status: 502 });
@@ -136,8 +184,7 @@ describe("resolveCard", () => {
       resolveCard("Sol Ring", { library: new Map(), token: TOKEN }),
     ).rejects.toBeDefined();
 
-    const sol = makeCard({ name: "Sol Ring" });
-    fetchSpy.mockImplementation(async () => searchResponse([sol]));
+    fetchSpy.mockImplementation(async () => scryfallCardResponse({ name: "Sol Ring" }));
     const result = await resolveCard("Sol Ring", { library: new Map(), token: TOKEN });
     expect(result?.name).toBe("Sol Ring");
     expect(fetchSpy).toHaveBeenCalledTimes(2);
