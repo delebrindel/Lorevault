@@ -150,4 +150,38 @@ describe("getOwnedLibrary", () => {
     expect(library.has("A-Lightning Bolt")).toBe(true);
     expect(library.has("Lightning Bolt")).toBe(true);
   });
+
+  it("serves the second call from cache within TTL", async () => {
+    fetchSpy.mockResolvedValue(pageResponse([makeItem({ name: "Sol Ring" })]));
+
+    const r1 = await getOwnedLibrary({ token: TOKEN, ttlMs: 60_000 });
+    const r2 = await getOwnedLibrary({ token: TOKEN, ttlMs: 60_000 });
+
+    expect(r1).toBe(r2);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("refetches after TTL expires", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchSpy.mockImplementation(async () => pageResponse([makeItem({ name: "Sol Ring" })]));
+
+      await getOwnedLibrary({ token: TOKEN, ttlMs: 1000 });
+      vi.advanceTimersByTime(1500);
+      await getOwnedLibrary({ token: TOKEN, ttlMs: 1000 });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("caches per token (different tokens do not share cache)", async () => {
+    fetchSpy.mockImplementation(async () => pageResponse([makeItem({ name: "Sol Ring" })]));
+
+    await getOwnedLibrary({ token: "token-a", ttlMs: 60_000 });
+    await getOwnedLibrary({ token: "token-b", ttlMs: 60_000 });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
 });

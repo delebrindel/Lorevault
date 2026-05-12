@@ -4,6 +4,15 @@ const MOXFIELD_API = "https://api2.moxfield.com/v1/collections/search";
 const PAGE_SIZE = 5000;
 const MAX_PAGES = 10;
 
+const DEFAULT_TTL_MS = 10 * 60 * 1000;
+
+interface CacheEntry {
+  result: OwnedLibraryResult;
+  expiresAt: number;
+}
+
+const cache = new Map<string, CacheEntry>();
+
 /** Thrown when Moxfield returns a non-OK response or invalid payload. */
 export class MoxfieldError extends Error {
   constructor(message: string, readonly status: number) {
@@ -26,9 +35,9 @@ export interface OwnedLibraryResult {
   totalResults: number;
 }
 
-/** Test helper. Cleared by tests; no-op until Task 5 introduces caching. */
+/** Test helper. Clears the in-memory cache. */
 export function clearLibraryCache(): void {
-  /* implemented in Task 5 */
+  cache.clear();
 }
 
 function buildPageUrl(page: number): string {
@@ -116,17 +125,36 @@ function groupByName(items: CollectionItem[]): OwnedLibrary {
 }
 
 export async function getOwnedLibrary(opts: GetOwnedLibraryOptions): Promise<OwnedLibraryResult> {
+  const ttlMs = opts.ttlMs ?? DEFAULT_TTL_MS;
+  const now = Date.now();
+
+  if (!opts.refresh && ttlMs > 0) {
+    const hit = cache.get(opts.token);
+    if (hit && hit.expiresAt > now) {
+      return hit.result;
+    }
+  }
+
+  const result = await fetchAllPages(opts.token);
+
+  if (ttlMs > 0) {
+    cache.set(opts.token, { result, expiresAt: now + ttlMs });
+  }
+
+  return result;
+}
+
+async function fetchAllPages(token: string): Promise<OwnedLibraryResult> {
   const all: CollectionItem[] = [];
-  const first = await fetchPage(opts.token, 1);
+  const first = await fetchPage(token, 1);
   all.push(...first.data);
   let totalResults = first.totalResults;
 
   const lastPage = Math.min(first.totalPages, MAX_PAGES);
   for (let page = 2; page <= lastPage; page++) {
-    const next = await fetchPage(opts.token, page);
+    const next = await fetchPage(token, page);
     all.push(...next.data);
     totalResults = next.totalResults;
   }
-
   return { library: groupByName(all), totalResults };
 }
