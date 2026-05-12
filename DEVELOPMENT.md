@@ -136,6 +136,38 @@ Run all server tests:
 cd server && npm test
 ```
 
+### API smoke testing
+
+You can exercise the current Lorevault endpoints with the cross-platform Node-based smoke runner:
+
+- `npm run smoke`
+
+The smoke runner always writes the full output to `logs/test-api.log`.
+
+Run it with:
+
+```bash
+npm run smoke
+```
+
+To inspect the end of the logfile:
+
+```bash
+npm run smoke:tail
+npm run smoke:tail -- 200
+```
+
+Optional smoke runner environment variables:
+
+- `BASE_URL` - override the default API base URL (`http://localhost:3001`)
+- `DECK_URL` - override the default Moxfield deck used by the smoke test
+
+This covers:
+- `/api/health`
+- `/api/collection`
+- `/api/deck/parse`
+- `/api/deck/resolve`
+
 ## Current architecture
 
 ### Data-source policy

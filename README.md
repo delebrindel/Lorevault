@@ -58,6 +58,46 @@ This starts:
 - the API server on `http://localhost:3001`
 - the Vite client on `http://localhost:5173`
 
+## Smoke testing
+
+Run the built-in API smoke test:
+
+```bash
+npm run smoke
+```
+
+It always writes the full output to `logs/test-api.log`.
+
+### Optional smoke test configuration
+
+The smoke runner supports these environment variables:
+
+- `BASE_URL` - override the default API base URL (`http://localhost:3001`)
+- `DECK_URL` - override the default Moxfield deck used by the smoke test
+
+Examples:
+
+```bash
+BASE_URL=http://localhost:4010 npm run smoke
+DECK_URL=https://moxfield.com/decks/example npm run smoke
+```
+
+On shells that use different env-var syntax, set `BASE_URL` / `DECK_URL` using your shell's normal environment-variable command style before running `npm run smoke`.
+
+### Inspect the smoke log
+
+Print the last 80 lines:
+
+```bash
+npm run smoke:tail
+```
+
+Print a custom number of lines:
+
+```bash
+npm run smoke:tail -- 200
+```
+
 ## Development
 
 For setup details, architecture notes, scripts, and current implementation status, see [DEVELOPMENT.md](./DEVELOPMENT.md).
