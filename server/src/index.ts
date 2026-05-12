@@ -8,6 +8,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { collection } from "./routes/collection.js";
+import { deck } from "./routes/deck.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isProduction = process.env.NODE_ENV === "production";
@@ -45,6 +46,7 @@ if (!isProduction) {
 
 // --- API routes ---
 app.route("/api/collection", collection);
+app.route("/api/deck", deck);
 app.get("/api/health", (c) => c.json({ status: "ok" }));
 
 // --- Static file serving (production only) ---
