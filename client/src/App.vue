@@ -58,7 +58,7 @@ async function fetchCollection() {
     }
 
     result.value = data as CollectionResult;
-    showToast(`Found ${result.value.filteredCount} cards matching your filters`);
+    showToast(`Loaded ${result.value.filteredCount} cards matching your filters`);
   } catch (err) {
     error.value = err instanceof Error ? err.message : "Network error";
   } finally {
@@ -70,6 +70,9 @@ async function fetchCollection() {
 <template>
   <div class="app">
     <h1>Lorevault</h1>
+    <p class="subtitle">
+      Browse your collection today. Transparent Commander analysis is coming next.
+    </p>
 
     <ColorSelector v-model="selectedColors" v-model:colorless="colorless" />
 
@@ -79,8 +82,8 @@ async function fetchCollection() {
         :disabled="loading || (!selectedColors.length && !colorless)"
         @click="fetchCollection"
       >
-        <template v-if="loading">Fetching...</template>
-        <template v-else>Load Collection</template>
+        <template v-if="loading">Loading...</template>
+        <template v-else>Browse Collection</template>
       </button>
     </div>
 
@@ -107,6 +110,13 @@ async function fetchCollection() {
 
 .actions {
   margin-bottom: 1rem;
+}
+
+.subtitle {
+  margin: -0.75rem 0 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .fetch-btn {
