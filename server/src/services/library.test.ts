@@ -184,4 +184,45 @@ describe("getOwnedLibrary", () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
+
+  it("refresh: true bypasses cache and refetches", async () => {
+    fetchSpy.mockImplementation(async () => pageResponse([makeItem({ name: "Sol Ring" })]));
+
+    await getOwnedLibrary({ token: TOKEN, ttlMs: 60_000 });
+    await getOwnedLibrary({ token: TOKEN, ttlMs: 60_000, refresh: true });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("refresh: true updates the cached entry for subsequent calls", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(pageResponse([makeItem({ name: "Sol Ring" })]))
+      .mockResolvedValueOnce(pageResponse([makeItem({ name: "Mana Crypt" })]));
+
+    await getOwnedLibrary({ token: TOKEN, ttlMs: 60_000 });
+    const refreshed = await getOwnedLibrary({ token: TOKEN, ttlMs: 60_000, refresh: true });
+    const cached = await getOwnedLibrary({ token: TOKEN, ttlMs: 60_000 });
+
+    expect(refreshed.library.has("Mana Crypt")).toBe(true);
+    expect(cached).toBe(refreshed);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws MoxfieldError(401) on auth failure", async () => {
+    fetchSpy.mockResolvedValue(new Response("nope", { status: 401, statusText: "Unauthorized" }));
+
+    await expect(getOwnedLibrary({ token: TOKEN, ttlMs: 0 })).rejects.toMatchObject({
+      name: "MoxfieldError",
+      status: 401,
+    });
+  });
+
+  it("throws MoxfieldError(502) on server error", async () => {
+    fetchSpy.mockResolvedValue(new Response("nope", { status: 500, statusText: "Server Error" }));
+
+    await expect(getOwnedLibrary({ token: TOKEN, ttlMs: 0 })).rejects.toMatchObject({
+      name: "MoxfieldError",
+      status: 502,
+    });
+  });
 });
