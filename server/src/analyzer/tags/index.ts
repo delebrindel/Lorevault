@@ -54,6 +54,11 @@ export function tagCard(card: Card): CardTags {
     rampScore,
     drawScore,
     tutorScore,
+    recursionScore: 0,
+    protectionPermanentScore: 0,
+    protectionSpellScore: 0,
+    boardwipeSurvivalScore: 0,
+    graveyardRelianceScore: 0,
     reasons,
   };
 }

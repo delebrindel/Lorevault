@@ -70,5 +70,10 @@ export interface CardTags {
   rampScore: number;
   drawScore: number;
   tutorScore: number;
+  recursionScore: number;
+  protectionPermanentScore: number;
+  protectionSpellScore: number;
+  boardwipeSurvivalScore: number;
+  graveyardRelianceScore: number;
   reasons: string[];
 }
