@@ -162,6 +162,26 @@ Optional smoke runner environment variables:
 - `BASE_URL` - override the default API base URL (`http://localhost:3001`)
 - `DECK_URL` - override the default Moxfield deck used by the smoke test
 
+Examples by shell:
+
+```bash
+# bash / zsh
+BASE_URL=http://localhost:4010 npm run smoke
+DECK_URL=https://moxfield.com/decks/example npm run smoke
+```
+
+```powershell
+# PowerShell
+$env:BASE_URL = 'http://localhost:4010'; npm run smoke
+$env:DECK_URL = 'https://moxfield.com/decks/example'; npm run smoke
+```
+
+```bat
+:: cmd.exe
+set BASE_URL=http://localhost:4010 && npm run smoke
+set DECK_URL=https://moxfield.com/decks/example && npm run smoke
+```
+
 This covers:
 - `/api/health`
 - `/api/collection`
