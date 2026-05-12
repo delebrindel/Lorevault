@@ -1,5 +1,19 @@
-import { describe, it, expect } from "vitest";
-import { filterByColorIdentity, mapCardResponse } from "./collection.js";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+vi.mock("../services/library.js", () => ({
+  getOwnedLibrary: vi.fn(),
+  MoxfieldError: class MoxfieldError extends Error {
+    status: number;
+    constructor(message: string, status: number) {
+      super(message);
+      this.name = "MoxfieldError";
+      this.status = status;
+    }
+  },
+}));
+
+import { collection, filterByColorIdentity, mapCardResponse } from "./collection.js";
+import { getOwnedLibrary, MoxfieldError } from "../services/library.js";
 import type { CollectionItem, Card, MtgColor } from "../types.js";
 
 /** Helper to build a minimal CollectionItem for testing. */
@@ -144,5 +158,54 @@ describe("mapCardResponse", () => {
     const mapped = mapCardResponse(item);
 
     expect(mapped.finish).toBe("Normal");
+  });
+});
+
+describe("POST /api/collection (route wiring)", () => {
+  const mockGet = getOwnedLibrary as unknown as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    mockGet.mockReset();
+    process.env.MOXFIELD_TOKEN = "test-token";
+    mockGet.mockResolvedValue({ library: new Map(), totalResults: 0 });
+  });
+
+  it("forwards refresh=true to getOwnedLibrary", async () => {
+    const res = await collection.request("/?refresh=true", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ colors: [], colorless: true }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(mockGet).toHaveBeenCalledWith(
+      expect.objectContaining({ token: "test-token", refresh: true }),
+    );
+  });
+
+  it("does not set refresh when query param is absent", async () => {
+    await collection.request("/", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ colors: [], colorless: true }),
+    });
+
+    expect(mockGet).toHaveBeenCalledWith(
+      expect.objectContaining({ token: "test-token", refresh: false }),
+    );
+  });
+
+  it("maps MoxfieldError(401) from the service to a 401 response", async () => {
+    mockGet.mockRejectedValueOnce(new MoxfieldError("Invalid or expired auth token", 401));
+
+    const res = await collection.request("/", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ colors: [], colorless: true }),
+    });
+
+    expect(res.status).toBe(401);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toContain("Invalid or expired auth token");
   });
 });
