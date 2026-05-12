@@ -1,5 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { parseManualDecklist } from "./deck-parser.js";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  parseManualDecklist,
+  extractMoxfieldDeckId,
+  fetchMoxfieldDeck,
+} from "./deck-parser.js";
 
 describe("parseManualDecklist", () => {
   it("parses a minimal mainboard-only decklist", () => {
@@ -101,5 +105,157 @@ describe("parseManualDecklist", () => {
       { name: "Forest", qty: 1 },
     ]);
     expect(result.unresolved).toEqual(["this is not a card line @#$"]);
+  });
+});
+
+describe("extractMoxfieldDeckId", () => {
+  it("returns a bare ID unchanged", () => {
+    expect(extractMoxfieldDeckId("abc123XYZ")).toBe("abc123XYZ");
+  });
+
+  it("extracts the ID from a full Moxfield URL", () => {
+    expect(extractMoxfieldDeckId("https://www.moxfield.com/decks/abc123XYZ")).toBe("abc123XYZ");
+  });
+
+  it("extracts the ID from a URL with trailing slash and query", () => {
+    expect(extractMoxfieldDeckId("https://moxfield.com/decks/abc123XYZ/?foo=bar")).toBe("abc123XYZ");
+  });
+
+  it("returns null for non-Moxfield URLs", () => {
+    expect(extractMoxfieldDeckId("https://example.com/decks/abc")).toBeNull();
+  });
+
+  it("returns null for empty input", () => {
+    expect(extractMoxfieldDeckId("")).toBeNull();
+    expect(extractMoxfieldDeckId("   ")).toBeNull();
+  });
+});
+
+describe("fetchMoxfieldDeck", () => {
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  function moxfieldDeckResponse(opts: {
+    commanders?: Array<{ name: string; qty?: number }>;
+    mainboard?: Array<{ name: string; qty?: number }>;
+    companions?: Array<{ name: string; qty?: number }>;
+  }): Response {
+    const toCardsMap = (entries: Array<{ name: string; qty?: number }> = []) =>
+      Object.fromEntries(
+        entries.map((e, i) => [
+          `id-${i}`,
+          {
+            quantity: e.qty ?? 1,
+            boardType: "mainboard",
+            finish: "nonFoil",
+            isFoil: false,
+            isAlter: false,
+            isProxy: false,
+            card: { name: e.name },
+          },
+        ]),
+      );
+
+    const body = {
+      boards: {
+        commanders: { cards: toCardsMap(opts.commanders) },
+        mainboard: { cards: toCardsMap(opts.mainboard) },
+        companions: { cards: toCardsMap(opts.companions) },
+      },
+    };
+    return new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  it("fetches a deck by ID and parses commander + mainboard", async () => {
+    fetchSpy.mockImplementation(async () =>
+      moxfieldDeckResponse({
+        commanders: [{ name: "Atraxa, Praetors' Voice" }],
+        mainboard: [
+          { name: "Sol Ring", qty: 1 },
+          { name: "Forest", qty: 5 },
+        ],
+      }),
+    );
+
+    const result = await fetchMoxfieldDeck({ idOrUrl: "abc123", token: "tok" });
+    expect(result.commander).toEqual(["Atraxa, Praetors' Voice"]);
+    expect(result.mainboard).toEqual([
+      { name: "Sol Ring", qty: 1 },
+      { name: "Forest", qty: 5 },
+    ]);
+    expect(result.unresolved).toEqual([]);
+  });
+
+  it("ignores companion boards rather than merging them into commander[]", async () => {
+    fetchSpy.mockImplementation(async () =>
+      moxfieldDeckResponse({
+        commanders: [{ name: "Kaalia of the Vast" }],
+        companions: [{ name: "Lutri, the Spellchaser" }],
+        mainboard: [{ name: "Sol Ring" }],
+      }),
+    );
+
+    const result = await fetchMoxfieldDeck({ idOrUrl: "abc123", token: "tok" });
+    expect(result.commander).toEqual(["Kaalia of the Vast"]);
+  });
+
+  it("accepts a full Moxfield URL", async () => {
+    fetchSpy.mockImplementation(async () =>
+      moxfieldDeckResponse({ commanders: [{ name: "Edric" }], mainboard: [] }),
+    );
+
+    await fetchMoxfieldDeck({
+      idOrUrl: "https://www.moxfield.com/decks/abc123",
+      token: "tok",
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const url = fetchSpy.mock.calls[0]![0] as string;
+    expect(url).toContain("/decks/all/abc123");
+  });
+
+  it("sends Bearer auth and the correct headers", async () => {
+    fetchSpy.mockImplementation(async () =>
+      moxfieldDeckResponse({ commanders: [{ name: "X" }], mainboard: [] }),
+    );
+
+    await fetchMoxfieldDeck({ idOrUrl: "abc123", token: "secret-token" });
+    const init = fetchSpy.mock.calls[0]![1] as RequestInit;
+    const headers = init.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer secret-token");
+    expect(headers.Accept).toBe("application/json");
+    expect(headers["User-Agent"]).toBe("moxfield-app/1.0");
+  });
+
+  it("throws MoxfieldError(401) on auth failure", async () => {
+    fetchSpy.mockResolvedValue(new Response("nope", { status: 401, statusText: "Unauthorized" }));
+    await expect(fetchMoxfieldDeck({ idOrUrl: "abc123", token: "tok" })).rejects.toMatchObject({
+      name: "MoxfieldError",
+      status: 401,
+    });
+  });
+
+  it("throws MoxfieldError(502) on server error", async () => {
+    fetchSpy.mockResolvedValue(new Response("nope", { status: 500, statusText: "Server Error" }));
+    await expect(fetchMoxfieldDeck({ idOrUrl: "abc123", token: "tok" })).rejects.toMatchObject({
+      name: "MoxfieldError",
+      status: 502,
+    });
+  });
+
+  it("throws MoxfieldError(400) for an unrecognised input", async () => {
+    await expect(
+      fetchMoxfieldDeck({ idOrUrl: "https://example.com/foo", token: "tok" }),
+    ).rejects.toMatchObject({ name: "MoxfieldError", status: 400 });
   });
 });

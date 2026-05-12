@@ -106,7 +106,7 @@ collection.post("/", async (c) => {
     }
   } catch (err) {
     if (err instanceof MoxfieldError) {
-      return c.json({ error: err.message }, err.status as 401 | 502);
+      return c.json({ error: err.message }, err.status as 400 | 401 | 502);
     }
     const message = err instanceof Error ? err.message : "Unknown error";
     return c.json({ error: message }, 502);

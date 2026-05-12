@@ -15,9 +15,12 @@ const cache = new Map<string, CacheEntry>();
 
 /** Thrown when Moxfield returns a non-OK response or invalid payload. */
 export class MoxfieldError extends Error {
-  constructor(message: string, readonly status: number) {
+  status: 400 | 401 | 502;
+
+  constructor(message: string, status: 400 | 401 | 502) {
     super(message);
     this.name = "MoxfieldError";
+    this.status = status;
   }
 }
 
