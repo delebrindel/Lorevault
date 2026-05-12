@@ -1,4 +1,5 @@
 import type { ResolvedDeck } from "../../types.js";
+import { detectArchetype } from "../archetype/detect.js";
 import type { Archetype, AxisReport, CrispiReport, Grade } from "../types.js";
 
 function gradeFromScore(score: number): Grade {
@@ -48,12 +49,16 @@ export function scoreDeck(
     consistency.score + resilience.score + interaction.score + speed.score
   ) / 4);
 
+  const detected = opts.archetypeOverride
+    ? { archetype: opts.archetypeOverride }
+    : detectArchetype(deck);
+
   return {
     overall,
     axes: { consistency, resilience, interaction, speed },
     deckMeta: {
       commander: deck.commander.map((card) => card.name),
-      archetype: opts.archetypeOverride ?? "midrange/goodstuff",
+      archetype: detected.archetype,
       colorIdentity: collectColorIdentity(deck),
       cardCount: deck.commander.length + deck.mainboard.reduce((sum, entry) => sum + entry.qty, 0),
       unresolvedCount: deck.unresolved.length,
