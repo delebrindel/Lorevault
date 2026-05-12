@@ -1,12 +1,10 @@
 import { Hono } from "hono";
-import type { CollectionItem, CollectionResponse, MtgColor } from "../types.js";
+import type { CollectionItem, MtgColor } from "../types.js";
 import { MTG_COLORS } from "../types.js";
+import { getOwnedLibrary, MoxfieldError } from "../services/library.js";
 
-const MOXFIELD_API = "https://api2.moxfield.com/v1/collections/search";
 const VALID_COLORS = new Set<string>(Object.keys(MTG_COLORS));
 const DEFAULT_FINISH = "Normal";
-const PAGE_SIZE = 5000;
-const MAX_PAGES = 10; // Safety cap: 50,000 cards max
 
 /** Filter collection items by color identity subset. */
 export function filterByColorIdentity(
@@ -53,73 +51,6 @@ export function mapCardResponse(item: CollectionItem) {
   };
 }
 
-/** Fetch a single page from the Moxfield collection API. */
-async function fetchPage(
-  token: string,
-  page: number,
-): Promise<{ data: CollectionResponse } | { error: string; status: number }> {
-  const params = new URLSearchParams({
-    q: "",
-    setId: "",
-    deckId: "",
-    rarity: "",
-    condition: "",
-    game: "",
-    cardLanguageId: "",
-    finish: "",
-    isAlter: "",
-    isProxy: "",
-    tradeBinderId: "none",
-    playStyle: "paperDollars",
-    pricingProvider: "cardkingdom",
-    priceMinimum: "",
-    priceMaximum: "",
-    pageNumber: String(page),
-    pageSize: String(PAGE_SIZE),
-    sortType: "cardName",
-    sortDirection: "ascending",
-  });
-
-  let response: Response;
-
-  try {
-    response = await fetch(`${MOXFIELD_API}?${params}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-        "User-Agent": "moxfield-app/1.0",
-      },
-      redirect: "follow",
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown network error";
-    return { error: `Failed to reach Moxfield API: ${message}`, status: 502 };
-  }
-
-  if (!response.ok) {
-    const status = response.status;
-    if (status === 401 || status === 403) {
-      return { error: "Invalid or expired auth token", status: 401 };
-    }
-    return { error: `Moxfield API error: ${status} ${response.statusText}`, status: 502 };
-  }
-
-  let data: CollectionResponse;
-
-  try {
-    data = (await response.json()) as CollectionResponse;
-  } catch {
-    return { error: "Moxfield API returned invalid JSON", status: 502 };
-  }
-
-  if (!Array.isArray(data?.data)) {
-    return { error: "Unexpected response structure from Moxfield API", status: 502 };
-  }
-
-  return { data };
-}
-
 const collection = new Hono();
 
 /**
@@ -162,23 +93,23 @@ collection.post("/", async (c) => {
     return c.json({ error: "Select at least one color or Colorless" }, 400);
   }
 
-  // Fetch all pages from Moxfield API
-  const allItems: CollectionItem[] = [];
-  let totalResults = 0;
+  const refresh = c.req.query("refresh") === "true";
 
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const result = await fetchPage(token, page);
-
-    if ("error" in result) {
-      return c.json({ error: result.error }, result.status as 400);
+  let totalResults: number;
+  let allItems: CollectionItem[];
+  try {
+    const { library, totalResults: t } = await getOwnedLibrary({ token, refresh });
+    totalResults = t;
+    allItems = [];
+    for (const owned of library.values()) {
+      allItems.push(...owned.printings);
     }
-
-    const { data } = result;
-    totalResults = data.totalResults;
-    allItems.push(...data.data);
-
-    // Stop if we've fetched all pages
-    if (page >= data.totalPages) break;
+  } catch (err) {
+    if (err instanceof MoxfieldError) {
+      return c.json({ error: err.message }, err.status as 401 | 502);
+    }
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return c.json({ error: message }, 502);
   }
 
   const filtered = filterByColorIdentity(allItems, colors, includeColorless);
