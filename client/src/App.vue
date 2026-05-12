@@ -69,7 +69,7 @@ async function fetchCollection() {
 
 <template>
   <div class="app">
-    <h1>Moxfield Collection Filter</h1>
+    <h1>Lorevault</h1>
 
     <ColorSelector v-model="selectedColors" v-model:colorless="colorless" />
 
@@ -80,7 +80,7 @@ async function fetchCollection() {
         @click="fetchCollection"
       >
         <template v-if="loading">Fetching...</template>
-        <template v-else>Fetch Collection</template>
+        <template v-else>Load Collection</template>
       </button>
     </div>
 

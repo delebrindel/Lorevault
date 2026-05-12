@@ -1,5 +1,5 @@
 {
-  "name": "moxfield-server",
+  "name": "lorevault-server",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "@hono/node-server": "^1.14.0",
     "dotenv": "^17.3.1",
     "hono": "^4.7.0",
-    "moxfield-app": "file:.."
+    "lorevault": "file:.."
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

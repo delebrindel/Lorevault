@@ -76,7 +76,7 @@ async function fetchPage(token: string, page: number): Promise<CollectionRespons
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/json",
-        "User-Agent": "moxfield-app/1.0",
+        "User-Agent": "lorevault/1.0",
       },
       redirect: "follow",
     });

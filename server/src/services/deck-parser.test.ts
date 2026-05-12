@@ -235,7 +235,7 @@ describe("fetchMoxfieldDeck", () => {
     const headers = init.headers as Record<string, string>;
     expect(headers.Authorization).toBe("Bearer secret-token");
     expect(headers.Accept).toBe("application/json");
-    expect(headers["User-Agent"]).toBe("moxfield-app/1.0");
+    expect(headers["User-Agent"]).toBe("lorevault/1.0");
   });
 
   it("throws MoxfieldError(401) on auth failure", async () => {

@@ -150,7 +150,7 @@ export async function fetchMoxfieldDeck(opts: {
       headers: {
         Authorization: `Bearer ${opts.token}`,
         Accept: "application/json",
-        "User-Agent": "moxfield-app/1.0",
+        "User-Agent": "lorevault/1.0",
       },
       redirect: "follow",
     });
