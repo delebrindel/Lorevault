@@ -69,13 +69,67 @@ function strongDeck(): ResolvedDeck {
   };
 }
 
+function fullSpecDeck(): ResolvedDeck {
+  return {
+    commander: [makeCard("Commander")],
+    mainboard: [
+      { card: land("Island"), qty: 36 },
+      { card: makeCard("Swords to Plowshares", {
+        oracle_text: "Exile target creature. Its controller gains life equal to its power.",
+      }), qty: 1 },
+      { card: makeCard("Counterspell", {
+        oracle_text: "Counter target spell.",
+      }), qty: 1 },
+      { card: makeCard("Force of Will", {
+        oracle_text: "You may pay 1 life and exile a blue card from your hand rather than pay this spell's mana cost. Counter target spell.",
+      }), qty: 1 },
+      { card: makeCard("Frilled Mystic", {
+        type: "Creature",
+        type_line: "Creature — Elf Lizard Wizard",
+        oracle_text: "Flash\nWhen Frilled Mystic enters, counter target spell.",
+      }), qty: 1 },
+      { card: makeCard("Rule of Law", {
+        type: "Enchantment",
+        type_line: "Enchantment",
+        oracle_text: "Each player can't cast more than one spell each turn.",
+      }), qty: 1 },
+    ],
+    unresolved: [],
+    ownedMap: new Map(),
+  };
+}
+
+function sorceryHeavyInteractionDeck(): ResolvedDeck {
+  return {
+    commander: [makeCard("Commander")],
+    mainboard: [
+      { card: land("Plains"), qty: 36 },
+      { card: makeCard("Vindicate", {
+        type: "Sorcery",
+        type_line: "Sorcery",
+        oracle_text: "Destroy target permanent.",
+      }), qty: 1 },
+      { card: makeCard("Wrath of God", {
+        type: "Sorcery",
+        type_line: "Sorcery",
+        oracle_text: "Destroy all creatures. They can't be regenerated.",
+      }), qty: 1 },
+    ],
+    unresolved: [],
+    ownedMap: new Map(),
+  };
+}
+
 describe("scoreInteraction", () => {
-  it("returns the expected sub-metric keys", () => {
+  it("returns the expected full Interaction sub-metric keys", () => {
     const report = scoreInteraction(strongDeck(), "control");
     expect(report.subMetrics.map((m) => m.key)).toEqual([
       "removal.spot",
       "removal.boardwipe",
       "counterspells.count",
+      "interaction.instantSpeed",
+      "interaction.free",
+      "interaction.stax",
       "interaction.coverage",
     ]);
   });
@@ -101,9 +155,24 @@ describe("scoreInteraction", () => {
     expect([0, 25, 55, 80, 100]).toContain(coverage?.score);
   });
 
-  it("adds a note that full-spec interaction remains deferred", () => {
-    const report = scoreInteraction(weakDeck(), "control");
-    expect(report.notes).toContain(
+  it("uses ratio behavior for instant-speed interaction", () => {
+    const instantHeavy = scoreInteraction(fullSpecDeck(), "control");
+    const sorceryHeavy = scoreInteraction(sorceryHeavyInteractionDeck(), "control");
+    const instantMetric = instantHeavy.subMetrics.find((m) => m.key === "interaction.instantSpeed");
+    const sorceryMetric = sorceryHeavy.subMetrics.find((m) => m.key === "interaction.instantSpeed");
+    expect((instantMetric?.raw ?? 0)).toBeGreaterThan(sorceryMetric?.raw ?? 0);
+    expect((instantMetric?.score ?? 0)).toBeGreaterThan(sorceryMetric?.score ?? 0);
+  });
+
+  it("records free interaction and stax evidence", () => {
+    const report = scoreInteraction(fullSpecDeck(), "control");
+    expect(report.evidence.some((e) => e.card === "Force of Will" && e.subMetric === "interaction.free")).toBe(true);
+    expect(report.evidence.some((e) => e.card === "Rule of Law" && e.subMetric === "interaction.stax")).toBe(true);
+  });
+
+  it("removes the old MVP-only deferred note", () => {
+    const report = scoreInteraction(fullSpecDeck(), "control");
+    expect(report.notes).not.toContain(
       "Instant-speed interaction, free interaction, and stax remain deferred in this MVP slice.",
     );
   });
