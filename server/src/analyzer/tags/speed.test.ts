@@ -73,4 +73,62 @@ describe("detectSpeedTags", () => {
     }));
     expect(tags.fastManaTierScore).toBe(0);
   });
+
+  it("detects clear finishing or must-answer threats", () => {
+    const tags = detectSpeedTags(makeCard("Craterhoof Behemoth", {
+      type: "Creature",
+      type_line: "Creature — Beast",
+      cmc: 8,
+      oracle_text: "When Craterhoof Behemoth enters, creatures you control gain trample and get +X/+X until end of turn, where X is the number of creatures you control.",
+    }));
+    expect(tags.threatDensityScore).toBeGreaterThan(0);
+    expect(tags.reasons).toContain("speed: threat density");
+  });
+
+  it("gives extra threat weight to commander-damage style closers", () => {
+    const tags = detectSpeedTags(makeCard("Blackblade Reforged", {
+      type: "Artifact",
+      type_line: "Legendary Artifact — Equipment",
+      cmc: 2,
+      oracle_text: "Equipped creature gets +1/+1 for each land you control.",
+    }));
+    expect(tags.threatDensityScore).toBeGreaterThan(1);
+  });
+
+  it("detects cheap broad tutors as speed-positive", () => {
+    const tags = detectSpeedTags(makeCard("Demonic Tutor", {
+      type: "Sorcery",
+      type_line: "Sorcery",
+      cmc: 2,
+      oracle_text: "Search your library for a card, put that card into your hand, then shuffle.",
+    }));
+    expect(tags.tutorSpeedScore).toBeGreaterThan(0);
+    expect(tags.reasons).toContain("speed: tutor-speed contribution");
+  });
+
+  it("scores slow narrow tutors below cheap broad tutors", () => {
+    const broad = detectSpeedTags(makeCard("Demonic Tutor", {
+      type: "Sorcery",
+      type_line: "Sorcery",
+      cmc: 2,
+      oracle_text: "Search your library for a card, put that card into your hand, then shuffle.",
+    }));
+    const narrow = detectSpeedTags(makeCard("Diabolic Tutor", {
+      type: "Sorcery",
+      type_line: "Sorcery",
+      cmc: 4,
+      oracle_text: "Search your library for a card, put that card into your hand, then shuffle.",
+    }));
+    expect(broad.tutorSpeedScore).toBeGreaterThan(narrow.tutorSpeedScore);
+  });
+
+  it("does not falsely count generic value cards as speed threats", () => {
+    const tags = detectSpeedTags(makeCard("Rhystic Study", {
+      type: "Enchantment",
+      type_line: "Enchantment",
+      cmc: 3,
+      oracle_text: "Whenever an opponent casts a spell, you may draw a card unless that player pays {1}.",
+    }));
+    expect(tags.threatDensityScore).toBe(0);
+  });
 });

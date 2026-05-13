@@ -91,5 +91,7 @@ export interface CardTags {
   fastManaTierScore: number;
   earlyRampScore: number;
   lowDropSpeedScore: number;
+  threatDensityScore: number;
+  tutorSpeedScore: number;
   reasons: string[];
 }

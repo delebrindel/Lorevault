@@ -150,4 +150,22 @@ describe("tagCard", () => {
     expect(lowDrop.lowDropSpeedScore).toBeGreaterThan(0);
     expect(lowDrop.reasons).toContain("speed: low drop");
   });
+
+  it("exposes threat and tutor-speed fields through tagCard", () => {
+    const threat = tagCard(makeCard("Craterhoof Behemoth", {
+      type: "Creature",
+      type_line: "Creature — Beast",
+      cmc: 8,
+      oracle_text: "When Craterhoof Behemoth enters, creatures you control gain trample and get +X/+X until end of turn, where X is the number of creatures you control.",
+    }));
+    const tutor = tagCard(makeCard("Demonic Tutor", {
+      type: "Sorcery",
+      type_line: "Sorcery",
+      cmc: 2,
+      oracle_text: "Search your library for a card, put that card into your hand, then shuffle.",
+    }));
+    expect(threat.threatDensityScore).toBeGreaterThan(0);
+    expect(tutor.tutorSpeedScore).toBeGreaterThan(0);
+    expect(tutor.reasons).toContain("speed: tutor-speed contribution");
+  });
 });

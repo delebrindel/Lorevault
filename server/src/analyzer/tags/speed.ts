@@ -4,6 +4,8 @@ export interface SpeedTagSlice {
   fastManaTierScore: number;
   earlyRampScore: number;
   lowDropSpeedScore: number;
+  threatDensityScore: number;
+  tutorSpeedScore: number;
   reasons: string[];
 }
 
@@ -26,6 +28,11 @@ const MANA_ADD_RE = /add (one mana|\{[WUBRGC]\}|two mana|three mana)/i;
 const LAND_RAMP_RE = /search your library for .*land card.*put .* onto the battlefield/i;
 const COST_REDUCER_RE = /spells? you cast cost .* less to cast/i;
 const MANA_DORK_RE = /^Creature/i;
+const TUTOR_ANY_RE = /search your library for a card/i;
+const TUTOR_NARROW_RE = /search your library for (an? )?(artifact|creature|enchantment|instant|sorcery) card/i;
+const FINISHER_RE = /(creatures you control gain trample and get \+X\/\+X|double strike|extra combat|infect|commander damage)/i;
+const MUST_ANSWER_RE = /(whenever .* deals combat damage to a player|at the beginning of combat on your turn)/i;
+const VOLTRON_PRESSURE_RE = /(equipped creature gets \+1\/\+1 for each land you control|equipped creature has double strike|equipped creature gets \+\d+\/\+\d+)/i;
 
 function isRampCard(card: Card): boolean {
   const oracle = card.oracle_text;
@@ -57,10 +64,33 @@ export function detectSpeedTags(card: Card): SpeedTagSlice {
     reasons.push("speed: low drop");
   }
 
+  let threatDensityScore = 0;
+  if (FINISHER_RE.test(card.oracle_text)) {
+    threatDensityScore = 1.5;
+    reasons.push("speed: threat density");
+  } else if (VOLTRON_PRESSURE_RE.test(card.oracle_text)) {
+    threatDensityScore = 1.25;
+    reasons.push("speed: threat density");
+  } else if (MUST_ANSWER_RE.test(card.oracle_text)) {
+    threatDensityScore = 1;
+    reasons.push("speed: threat density");
+  }
+
+  let tutorSpeedScore = 0;
+  if (TUTOR_ANY_RE.test(card.oracle_text)) {
+    tutorSpeedScore = card.cmc <= 2 ? 1 : 0.6;
+    reasons.push("speed: tutor-speed contribution");
+  } else if (TUTOR_NARROW_RE.test(card.oracle_text)) {
+    tutorSpeedScore = card.cmc <= 2 ? 0.75 : 0.4;
+    reasons.push("speed: tutor-speed contribution");
+  }
+
   return {
     fastManaTierScore,
     earlyRampScore,
     lowDropSpeedScore,
+    threatDensityScore,
+    tutorSpeedScore,
     reasons,
   };
 }

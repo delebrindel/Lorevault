@@ -75,6 +75,8 @@ export function tagCard(card: Card): CardTags {
     fastManaTierScore: speed.fastManaTierScore,
     earlyRampScore: speed.earlyRampScore,
     lowDropSpeedScore: speed.lowDropSpeedScore,
+    threatDensityScore: speed.threatDensityScore,
+    tutorSpeedScore: speed.tutorSpeedScore,
     reasons: [...reasons, ...resilience.reasons, ...interaction.reasons, ...speed.reasons],
   };
 }
