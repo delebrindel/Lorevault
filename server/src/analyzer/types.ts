@@ -88,5 +88,8 @@ export interface CardTags {
   interactionInstantSpeed: number;
   interactionFreeScore: number;
   interactionStaxScore: number;
+  fastManaTierScore: number;
+  earlyRampScore: number;
+  lowDropSpeedScore: number;
   reasons: string[];
 }

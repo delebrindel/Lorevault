@@ -131,4 +131,23 @@ describe("tagCard", () => {
     expect(tags.interactionStaxScore).toBeGreaterThan(0);
     expect(tags.reasons).toContain("interaction: stax piece");
   });
+
+  it("exposes speed helper signals through tagCard", () => {
+    const fastMana = tagCard(makeCard("Sol Ring", {
+      type: "Artifact",
+      type_line: "Artifact",
+      cmc: 1,
+      oracle_text: "{T}: Add {C}{C}.",
+    }));
+    const lowDrop = tagCard(makeCard("Esper Sentinel", {
+      type: "Creature",
+      type_line: "Artifact Creature — Human Soldier",
+      cmc: 1,
+      oracle_text: "Whenever an opponent casts their first noncreature spell each turn, draw a card unless that player pays {X}, where X is Esper Sentinel's power.",
+    }));
+    expect(fastMana.fastManaTierScore).toBe(40);
+    expect(fastMana.earlyRampScore).toBeGreaterThan(0);
+    expect(lowDrop.lowDropSpeedScore).toBeGreaterThan(0);
+    expect(lowDrop.reasons).toContain("speed: low drop");
+  });
 });

@@ -2,6 +2,7 @@ import type { Card } from "../../types.js";
 import type { CardTags } from "../types.js";
 import { detectInteractionTags } from "./interaction.js";
 import { detectResilienceTags } from "./resilience.js";
+import { detectSpeedTags } from "./speed.js";
 
 const DRAW_TRIGGER_RE = /(at the beginning of|whenever|whenever one or more)/i;
 const DRAW_RE = /draws? (a|one|two|three|x) cards?/i;
@@ -19,6 +20,7 @@ export function tagCard(card: Card): CardTags {
   const isLand = /\bLand\b/i.test(card.type_line);
   const resilience = detectResilienceTags(card);
   const interaction = detectInteractionTags(card);
+  const speed = detectSpeedTags(card);
 
   let rampScore = 0;
   if (!isLand && MANA_ADD_RE.test(oracle)) {
@@ -70,6 +72,9 @@ export function tagCard(card: Card): CardTags {
     interactionInstantSpeed: interaction.interactionInstantSpeed,
     interactionFreeScore: interaction.interactionFreeScore,
     interactionStaxScore: interaction.interactionStaxScore,
-    reasons: [...reasons, ...resilience.reasons, ...interaction.reasons],
+    fastManaTierScore: speed.fastManaTierScore,
+    earlyRampScore: speed.earlyRampScore,
+    lowDropSpeedScore: speed.lowDropSpeedScore,
+    reasons: [...reasons, ...resilience.reasons, ...interaction.reasons, ...speed.reasons],
   };
 }
