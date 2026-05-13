@@ -47,9 +47,7 @@ describe("scoreDeck", () => {
     expect(report.axes.consistency.grade).toBeDefined();
     expect(report.axes.resilience.grade).toBeDefined();
     expect(report.axes.interaction.grade).toBeDefined();
-    expect(report.axes.speed.notes).toEqual([
-      "Not implemented yet in this backend slice.",
-    ]);
+    expect(report.axes.speed.grade).toBeDefined();
     expect(report.deckMeta.commander).toEqual(["Atraxa, Praetors' Voice"]);
     expect(report.deckMeta.archetype).toBe("control");
     expect(report.deckMeta.unresolvedCount).toBe(1);
@@ -57,26 +55,24 @@ describe("scoreDeck", () => {
     expect(Number.isNaN(Date.parse(report.generatedAt))).toBe(false);
   });
 
-  it("keeps the full-report contract while consistency, resilience, and full-spec interaction are implemented", () => {
+  it("keeps the full-report contract while all four CRISPI axes are implemented", () => {
     const report = scoreDeck(makeDeck(), { archetypeOverride: "control" });
 
     expect(report.axes.consistency.subMetrics.length).toBeGreaterThan(0);
     expect(report.axes.resilience.subMetrics.length).toBeGreaterThan(0);
-    expect(report.axes.interaction.subMetrics.map((m) => m.key)).toEqual([
-      "removal.spot",
-      "removal.boardwipe",
-      "counterspells.count",
-      "interaction.instantSpeed",
-      "interaction.free",
-      "interaction.stax",
-      "interaction.coverage",
+    expect(report.axes.interaction.subMetrics.length).toBeGreaterThan(0);
+    expect(report.axes.speed.subMetrics.map((m) => m.key)).toEqual([
+      "mana.fast",
+      "mana.earlyRamp",
+      "curve.avgCMC",
+      "curve.lowDrops",
     ]);
-    expect(report.axes.speed.score).toBe(0);
     expect(report.overall).toBe(
       Math.round((
         report.axes.consistency.score +
         report.axes.resilience.score +
-        report.axes.interaction.score
+        report.axes.interaction.score +
+        report.axes.speed.score
       ) / 4),
     );
   });

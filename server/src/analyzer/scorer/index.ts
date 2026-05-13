@@ -3,6 +3,7 @@ import { detectArchetype } from "../archetype/detect.js";
 import { scoreConsistency } from "./consistency.js";
 import { scoreInteraction } from "./interaction.js";
 import { scoreResilience } from "./resilience.js";
+import { scoreSpeed } from "./speed.js";
 import type { Archetype, AxisReport, CrispiReport, Grade } from "../types.js";
 
 function gradeFromScore(score: number): Grade {
@@ -50,7 +51,7 @@ export function scoreDeck(
   const consistency = scoreConsistency(deck, detected.archetype);
   const resilience = scoreResilience(deck, detected.archetype);
   const interaction = scoreInteraction(deck, detected.archetype);
-  const speed = makeStubAxis();
+  const speed = scoreSpeed(deck, detected.archetype);
 
   const overall = Math.round((
     consistency.score + resilience.score + interaction.score + speed.score
