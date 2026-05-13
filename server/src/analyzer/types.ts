@@ -75,5 +75,15 @@ export interface CardTags {
   protectionSpellScore: number;
   boardwipeSurvivalScore: number;
   graveyardRelianceScore: number;
+  removalSpotScore: number;
+  removalBoardwipeScore: number;
+  counterspellScore: number;
+  interactionCoverage: {
+    creature: boolean;
+    artifact: boolean;
+    enchantment: boolean;
+    planeswalker: boolean;
+    land: boolean;
+  };
   reasons: string[];
 }

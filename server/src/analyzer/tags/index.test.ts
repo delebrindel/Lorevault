@@ -86,4 +86,27 @@ describe("tagCard", () => {
     }));
     expect(tags.protectionSpellScore).toBe(0);
   });
+
+  it("merges interaction helper signals into tagCard output", () => {
+    const tags = tagCard(makeCard("Beast Within", {
+      oracle_text: "Destroy target permanent. Its controller creates a 3/3 green Beast creature token.",
+    }));
+    expect(tags.removalSpotScore).toBeGreaterThan(1);
+    expect(tags.interactionCoverage.creature).toBe(true);
+    expect(tags.interactionCoverage.artifact).toBe(true);
+    expect(tags.interactionCoverage.enchantment).toBe(true);
+    expect(tags.interactionCoverage.planeswalker).toBe(true);
+    expect(tags.interactionCoverage.land).toBe(true);
+    expect(tags.reasons).toContain("interaction: spot removal");
+  });
+
+  it("exposes counterspell scoring through tagCard without changing resilience protection", () => {
+    const tags = tagCard(makeCard("Counterspell", {
+      type: "Instant",
+      type_line: "Instant",
+      oracle_text: "Counter target spell.",
+    }));
+    expect(tags.counterspellScore).toBeGreaterThan(0);
+    expect(tags.protectionSpellScore).toBe(0);
+  });
 });

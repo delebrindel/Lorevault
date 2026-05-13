@@ -1,5 +1,6 @@
 import type { Card } from "../../types.js";
 import type { CardTags } from "../types.js";
+import { detectInteractionTags } from "./interaction.js";
 import { detectResilienceTags } from "./resilience.js";
 
 const DRAW_TRIGGER_RE = /(at the beginning of|whenever|whenever one or more)/i;
@@ -17,6 +18,7 @@ export function tagCard(card: Card): CardTags {
   const oracle = card.oracle_text;
   const isLand = /\bLand\b/i.test(card.type_line);
   const resilience = detectResilienceTags(card);
+  const interaction = detectInteractionTags(card);
 
   let rampScore = 0;
   if (!isLand && MANA_ADD_RE.test(oracle)) {
@@ -61,6 +63,10 @@ export function tagCard(card: Card): CardTags {
     protectionSpellScore: resilience.protectionSpellScore,
     boardwipeSurvivalScore: resilience.boardwipeSurvivalScore,
     graveyardRelianceScore: resilience.graveyardRelianceScore,
-    reasons: [...reasons, ...resilience.reasons],
+    removalSpotScore: interaction.removalSpotScore,
+    removalBoardwipeScore: interaction.removalBoardwipeScore,
+    counterspellScore: interaction.counterspellScore,
+    interactionCoverage: interaction.interactionCoverage,
+    reasons: [...reasons, ...resilience.reasons, ...interaction.reasons],
   };
 }
