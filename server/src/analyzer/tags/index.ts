@@ -67,6 +67,9 @@ export function tagCard(card: Card): CardTags {
     removalBoardwipeScore: interaction.removalBoardwipeScore,
     counterspellScore: interaction.counterspellScore,
     interactionCoverage: interaction.interactionCoverage,
+    interactionInstantSpeed: interaction.interactionInstantSpeed,
+    interactionFreeScore: interaction.interactionFreeScore,
+    interactionStaxScore: interaction.interactionStaxScore,
     reasons: [...reasons, ...resilience.reasons, ...interaction.reasons],
   };
 }

@@ -81,4 +81,58 @@ describe("detectInteractionTags", () => {
     expect(tags.counterspellScore).toBe(0);
     expect(Object.values(tags.interactionCoverage).some(Boolean)).toBe(false);
   });
+
+  it("marks instant-speed interaction for instants", () => {
+    const tags = detectInteractionTags(makeCard("Counterspell", {
+      oracle_text: "Counter target spell.",
+    }));
+    expect(tags.interactionInstantSpeed).toBeGreaterThan(0);
+    expect(tags.reasons).toContain("interaction: instant-speed interaction");
+  });
+
+  it("detects flash interaction conservatively", () => {
+    const tags = detectInteractionTags(makeCard("Frilled Mystic", {
+      type: "Creature",
+      type_line: "Creature — Elf Lizard Wizard",
+      oracle_text: "Flash\nWhen Frilled Mystic enters, counter target spell.",
+    }));
+    expect(tags.counterspellScore).toBeGreaterThan(0);
+    expect(tags.interactionInstantSpeed).toBeGreaterThan(0);
+  });
+
+  it("detects explicit free interaction", () => {
+    const tags = detectInteractionTags(makeCard("Force of Will", {
+      oracle_text: "You may pay 1 life and exile a blue card from your hand rather than pay this spell's mana cost. Counter target spell.",
+    }));
+    expect(tags.interactionFreeScore).toBeGreaterThan(0);
+    expect(tags.reasons).toContain("interaction: free interaction");
+  });
+
+  it("detects explicit stax pieces", () => {
+    const tags = detectInteractionTags(makeCard("Rule of Law", {
+      type: "Enchantment",
+      type_line: "Enchantment",
+      oracle_text: "Each player can't cast more than one spell each turn.",
+    }));
+    expect(tags.interactionStaxScore).toBeGreaterThan(0);
+    expect(tags.reasons).toContain("interaction: stax piece");
+  });
+
+  it("does not count non-interaction free-cast text", () => {
+    const tags = detectInteractionTags(makeCard("Omniscience", {
+      type: "Enchantment",
+      type_line: "Enchantment",
+      oracle_text: "You may cast spells from your hand without paying their mana costs.",
+    }));
+    expect(tags.interactionFreeScore).toBe(0);
+  });
+
+  it("does not count generic utility permanents as stax", () => {
+    const tags = detectInteractionTags(makeCard("Rhystic Study", {
+      type: "Enchantment",
+      type_line: "Enchantment",
+      oracle_text: "Whenever an opponent casts a spell, you may draw a card unless that player pays {1}.",
+    }));
+    expect(tags.interactionStaxScore).toBe(0);
+  });
 });

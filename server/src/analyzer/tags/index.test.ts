@@ -109,4 +109,26 @@ describe("tagCard", () => {
     expect(tags.counterspellScore).toBeGreaterThan(0);
     expect(tags.protectionSpellScore).toBe(0);
   });
+
+  it("exposes instant-speed and free interaction fields through tagCard", () => {
+    const tags = tagCard(makeCard("Force of Will", {
+      type: "Instant",
+      type_line: "Instant",
+      oracle_text: "You may pay 1 life and exile a blue card from your hand rather than pay this spell's mana cost. Counter target spell.",
+    }));
+    expect(tags.interactionInstantSpeed).toBeGreaterThan(0);
+    expect(tags.interactionFreeScore).toBeGreaterThan(0);
+    expect(tags.counterspellScore).toBeGreaterThan(0);
+    expect(tags.protectionSpellScore).toBe(0);
+  });
+
+  it("exposes stax interaction fields through tagCard", () => {
+    const tags = tagCard(makeCard("Rule of Law", {
+      type: "Enchantment",
+      type_line: "Enchantment",
+      oracle_text: "Each player can't cast more than one spell each turn.",
+    }));
+    expect(tags.interactionStaxScore).toBeGreaterThan(0);
+    expect(tags.reasons).toContain("interaction: stax piece");
+  });
 });

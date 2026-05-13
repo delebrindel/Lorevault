@@ -85,5 +85,8 @@ export interface CardTags {
     planeswalker: boolean;
     land: boolean;
   };
+  interactionInstantSpeed: number;
+  interactionFreeScore: number;
+  interactionStaxScore: number;
   reasons: string[];
 }
