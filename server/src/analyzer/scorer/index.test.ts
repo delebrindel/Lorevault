@@ -57,12 +57,20 @@ describe("scoreDeck", () => {
     expect(Number.isNaN(Date.parse(report.generatedAt))).toBe(false);
   });
 
-  it("keeps the full-report contract while consistency, resilience, and interaction are implemented", () => {
+  it("keeps the full-report contract while consistency, resilience, and full-spec interaction are implemented", () => {
     const report = scoreDeck(makeDeck(), { archetypeOverride: "control" });
 
     expect(report.axes.consistency.subMetrics.length).toBeGreaterThan(0);
     expect(report.axes.resilience.subMetrics.length).toBeGreaterThan(0);
-    expect(report.axes.interaction.subMetrics.length).toBeGreaterThan(0);
+    expect(report.axes.interaction.subMetrics.map((m) => m.key)).toEqual([
+      "removal.spot",
+      "removal.boardwipe",
+      "counterspells.count",
+      "interaction.instantSpeed",
+      "interaction.free",
+      "interaction.stax",
+      "interaction.coverage",
+    ]);
     expect(report.axes.speed.score).toBe(0);
     expect(report.overall).toBe(
       Math.round((
