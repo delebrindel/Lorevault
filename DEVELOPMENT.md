@@ -12,7 +12,7 @@ Lorevault is a split frontend/backend application:
 Current focus:
 - collection filtering
 - deck parsing, resolution, and scoring
-- backend-first analyzer slices for transparent Commander insights
+- completed backend CRISPI scoring with client-side analyzer UI as the next major milestone
 
 ## Prerequisites
 
@@ -234,10 +234,9 @@ Lorevault uses this project-wide source-of-truth split:
 - accepts a JSON-serialized `ResolvedDeck`
 - normalizes `ownedMap` back into a `Map`
 - returns a full `CrispiReport`
-- currently implements:
+- currently implements all four CRISPI axes:
   - `Consistency`
   - `Resilience`
-- currently stubs:
   - `Interaction`
   - `Speed`
 
@@ -257,13 +256,17 @@ Lorevault uses this project-wide source-of-truth split:
 - archetype detector stub
 - consistency tagger and scorer slice
 - resilience tagger and scorer slice
+- interaction scorer (full-spec backend scope)
+- speed scorer (full-spec backend scope)
+- representative `CrispiReport` scorer fixtures and snapshots
 - route mounting in the server entrypoint
 
 ### In progress / next
-- interaction scorer slice
-- speed scorer slice
-- richer archetype detection
-- analyzer UI
+- Analyzer UI MVP with a Collection / Analyzer tab switch
+- parse -> resolve -> score client flow
+- analyzer score dashboard with overall score + 4 axis tiles
+- richer archetype detection and heuristic cleanup
+- analyzer drill-down / evidence UX
 - collection-aware recommendations
 
 ## Useful files
@@ -286,14 +289,20 @@ Lorevault uses this project-wide source-of-truth split:
 ### Planning docs
 - `docs/superpowers/specs/2026-05-11-commander-deck-analyzer-design.md`
 - `docs/superpowers/specs/2026-05-12-phase-1d-resilience-slice-design.md`
+- `docs/superpowers/specs/2026-05-13-phase-2a-analyzer-ui-mvp-design.md`
 - `docs/superpowers/plans/2026-05-11-phase-1a-data-layer.md`
 - `docs/superpowers/plans/2026-05-11-phase-1b-deck-resolver.md`
 - `docs/superpowers/plans/2026-05-12-phase-1c-crispi-consistency-slice.md`
 - `docs/superpowers/plans/2026-05-12-phase-1d-resilience-slice.md`
+- `docs/superpowers/plans/2026-05-13-phase-1e-interaction-mvp-slice.md`
+- `docs/superpowers/plans/2026-05-13-phase-1f-interaction-full-spec-slice.md`
+- `docs/superpowers/plans/2026-05-13-phase-1g-speed-mvp-slice.md`
+- `docs/superpowers/plans/2026-05-13-phase-1h-speed-full-spec-slice.md`
 
 ## Notes
 
 - In local development, the Vite client proxies `/api` to the server on port `3001`.
 - The server currently requires `MOXFIELD_TOKEN` at startup.
-- The backend analyzer is ahead of the client UI right now: scoring routes exist before the analyzer views do.
+- The backend CRISPI engine is complete for Phase 1 backend scope.
+- The client is now the next major delivery area: Analyzer UI MVP comes next.
 - See `ROADMAP.md` for the higher-level milestone view.

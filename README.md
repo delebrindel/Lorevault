@@ -14,20 +14,24 @@ It pairs a Vue client with a Hono + TypeScript server, using Moxfield for collec
 - Parse manual decklists into a normalized deck shape
 - Resolve deck cards against your owned library first, then Scryfall fallback data
 - Score resolved decks through `POST /api/deck/score`
-- Return live CRISPI reports with implemented `Consistency` and `Resilience` axes
+- Return live CRISPI reports with all four backend CRISPI axes implemented:
+  - `Consistency`
+  - `Resilience`
+  - `Interaction`
+  - `Speed`
 
 ## Coming soon
 
-- Remaining CRISPI axes: `Interaction` and `Speed`
-- Richer analyzer heuristics, evidence, and archetype detection
-- Analyzer UI built on top of the parse / resolve / score APIs
+- Analyzer UI MVP built on top of the parse / resolve / score APIs
+- Axis drill-downs, evidence views, and archetype override in the client
+- Richer analyzer heuristics and archetype detection
 - Collection-aware upgrade suggestions
 
 ## Roadmap
 
-- Finish the backend CRISPI engine by implementing `Interaction` and `Speed`
+- Build the Analyzer UI MVP on top of the completed backend CRISPI engine
+- Add analyzer score drill-downs, evidence views, and archetype override controls
 - Improve backend heuristics such as richer archetype detection and deeper card tagging
-- Add analyzer score and evidence views in the client
 - Build collection-aware recommendation features on top of resolved deck data
 - See the full roadmap in [ROADMAP.md](./ROADMAP.md)
 

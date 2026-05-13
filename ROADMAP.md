@@ -19,14 +19,14 @@ Implemented now:
 - `POST /api/deck/score`
 - CRISPI `Consistency`
 - CRISPI `Resilience`
-
-Still stubbed in the backend analyzer:
 - CRISPI `Interaction`
 - CRISPI `Speed`
+- representative backend scorer fixtures and snapshots
 
 Still missing above the backend:
 - analyzer UI score views
 - evidence drill-down UX
+- archetype override UX
 - collection-aware recommendations
 
 ## Recently completed milestones
@@ -37,33 +37,39 @@ Still missing above the backend:
 - cross-platform Node smoke runner
 - smoke logfile tooling
 - phase 1.C backend consistency slice
-- phase 1.D backend resilience slice groundwork and scorer wiring
+- phase 1.D backend resilience slice
+- phase 1.E backend interaction MVP slice
+- phase 1.F backend interaction full-spec completion
+- phase 1.G backend speed MVP slice
+- phase 1.H backend speed full-spec completion + scorer hardening
 
 ## Next priorities
 
-### 1. Finish the backend CRISPI engine
-Build the remaining backend scoring slices so the analyzer contract is complete:
+### 1. Add the Analyzer UI MVP
+Expand the client beyond collection browsing so it can:
 
-- `Interaction`
-- `Speed`
+- switch between `Collection` and `Analyzer`
+- submit parse / resolve / score flows
+- display overall CRISPI score + 4 axis tiles
+- show parsed/resolved deck summary and detected archetype
 
-This keeps the backend-first strategy intact and gives the future UI a stable report shape with all four axes implemented.
+This is the next planned slice and now sits on top of a complete backend CRISPI contract.
 
-### 2. Improve analyzer heuristics
-Once all four axes exist, deepen the backend model with better analysis quality:
+### 2. Add analyzer drill-down UX
+After the thin UI MVP lands, deepen the analyzer interface with:
+
+- axis drill-down tables
+- per-card evidence views
+- notes UX
+- archetype override controls
+
+### 3. Improve analyzer heuristics
+Now that all four axes exist, deepen the backend model with better analysis quality:
 
 - richer archetype detection
 - deeper tag coverage
 - clearer evidence generation
-- consistency/spec-alignment cleanup where needed
-
-### 3. Add analyzer UI
-Expand the client beyond collection browsing so it can:
-
-- submit parse / resolve / score flows
-- display CRISPI axis scores
-- surface per-card evidence and notes
-- expose archetype override controls
+- scoring/spec-alignment cleanup where needed
 
 ### 4. Add collection-aware recommendations
 Build recommendation features on top of resolved/scored deck data and the owned collection.

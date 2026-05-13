@@ -5,6 +5,5 @@ node_modules
 dist
 *.vue.js
 *.log
-docs/*
 .worktrees/
 .vscode/
