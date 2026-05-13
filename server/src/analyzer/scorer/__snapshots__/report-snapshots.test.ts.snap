@@ -461,7 +461,7 @@ exports[`CrispiReport snapshots > scores the aggro/voltron fixture 1`] = `
     ],
     "unresolvedCount": 0,
   },
-  "generatedAt": "2026-05-13T02:17:57.897Z",
+  "generatedAt": "<generated-at>",
   "overall": 24,
 }
 `;
@@ -914,7 +914,7 @@ exports[`CrispiReport snapshots > scores the combo fixture 1`] = `
     ],
     "unresolvedCount": 0,
   },
-  "generatedAt": "2026-05-13T02:17:57.905Z",
+  "generatedAt": "<generated-at>",
   "overall": 24,
 }
 `;
@@ -1384,7 +1384,7 @@ exports[`CrispiReport snapshots > scores the control fixture 1`] = `
     ],
     "unresolvedCount": 0,
   },
-  "generatedAt": "2026-05-13T02:17:57.902Z",
+  "generatedAt": "<generated-at>",
   "overall": 22,
 }
 `;

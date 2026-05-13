@@ -66,6 +66,9 @@ describe("scoreDeck", () => {
       "mana.earlyRamp",
       "curve.avgCMC",
       "curve.lowDrops",
+      "threat.density",
+      "wincon.turnEstimate",
+      "tutor.speed",
     ]);
     expect(report.overall).toBe(
       Math.round((
