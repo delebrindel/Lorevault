@@ -66,14 +66,65 @@ function strongDeck(): ResolvedDeck {
   };
 }
 
+function fullSpecDeck(): ResolvedDeck {
+  return {
+    commander: [makeCard("Commander", { type: "Creature", type_line: "Legendary Creature", cmc: 3 })],
+    mainboard: [
+      { card: land("Plains"), qty: 36 },
+      { card: makeCard("Sol Ring", { cmc: 1, oracle_text: "{T}: Add {C}{C}." }), qty: 1 },
+      { card: makeCard("Demonic Tutor", {
+        type: "Sorcery",
+        type_line: "Sorcery",
+        cmc: 2,
+        oracle_text: "Search your library for a card, put that card into your hand, then shuffle.",
+      }), qty: 1 },
+      { card: makeCard("Blackblade Reforged", {
+        type: "Artifact",
+        type_line: "Legendary Artifact — Equipment",
+        cmc: 2,
+        oracle_text: "Equipped creature gets +1/+1 for each land you control.",
+      }), qty: 1 },
+      { card: makeCard("Craterhoof Behemoth", {
+        type: "Creature",
+        type_line: "Creature — Beast",
+        cmc: 8,
+        oracle_text: "When Craterhoof Behemoth enters, creatures you control gain trample and get +X/+X until end of turn, where X is the number of creatures you control.",
+      }), qty: 1 },
+    ],
+    unresolved: [],
+    ownedMap: new Map(),
+  };
+}
+
+function slowerDeck(): ResolvedDeck {
+  return {
+    commander: [makeCard("Commander", { type: "Creature", type_line: "Legendary Creature", cmc: 6 })],
+    mainboard: [
+      { card: land("Plains"), qty: 36 },
+      { card: makeCard("Diabolic Tutor", {
+        type: "Sorcery",
+        type_line: "Sorcery",
+        cmc: 4,
+        oracle_text: "Search your library for a card, put that card into your hand, then shuffle.",
+      }), qty: 1 },
+      { card: makeCard("Big Creature", { type: "Creature", type_line: "Creature", cmc: 7 }), qty: 4 },
+    ],
+    unresolved: [],
+    ownedMap: new Map(),
+  };
+}
+
 describe("scoreSpeed", () => {
-  it("returns the expected Speed sub-metric keys", () => {
+  it("returns the expected full Speed sub-metric keys", () => {
     const report = scoreSpeed(strongDeck(), "aggro/voltron");
     expect(report.subMetrics.map((m) => m.key)).toEqual([
       "mana.fast",
       "mana.earlyRamp",
       "curve.avgCMC",
       "curve.lowDrops",
+      "threat.density",
+      "wincon.turnEstimate",
+      "tutor.speed",
     ]);
   });
 
@@ -98,9 +149,23 @@ describe("scoreSpeed", () => {
     expect(aggroCurve?.score).not.toBe(controlCurve?.score);
   });
 
-  it("includes the MVP deferred note", () => {
-    const report = scoreSpeed(weakDeck(), "control");
-    expect(report.notes).toContain(
+  it("records threat and tutor-speed evidence", () => {
+    const report = scoreSpeed(fullSpecDeck(), "aggro/voltron");
+    expect(report.evidence.some((e) => e.card === "Craterhoof Behemoth" && e.subMetric === "threat.density")).toBe(true);
+    expect(report.evidence.some((e) => e.card === "Demonic Tutor" && e.subMetric === "tutor.speed")).toBe(true);
+  });
+
+  it("estimates a faster win turn for the faster deck profile", () => {
+    const faster = scoreSpeed(fullSpecDeck(), "aggro/voltron");
+    const slower = scoreSpeed(slowerDeck(), "aggro/voltron");
+    const fasterMetric = faster.subMetrics.find((m) => m.key === "wincon.turnEstimate");
+    const slowerMetric = slower.subMetrics.find((m) => m.key === "wincon.turnEstimate");
+    expect((fasterMetric?.score ?? 0)).toBeGreaterThan(slowerMetric?.score ?? 0);
+  });
+
+  it("removes the old Speed MVP-only deferred note", () => {
+    const report = scoreSpeed(fullSpecDeck(), "aggro/voltron");
+    expect(report.notes).not.toContain(
       "Threat density, win-turn estimate, and tutor-speed remain deferred in this Speed MVP slice.",
     );
   });
