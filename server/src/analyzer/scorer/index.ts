@@ -1,6 +1,7 @@
 import type { ResolvedDeck } from "../../types.js";
 import { detectArchetype } from "../archetype/detect.js";
 import { scoreConsistency } from "./consistency.js";
+import { scoreInteraction } from "./interaction.js";
 import { scoreResilience } from "./resilience.js";
 import type { Archetype, AxisReport, CrispiReport, Grade } from "../types.js";
 
@@ -48,7 +49,7 @@ export function scoreDeck(
 
   const consistency = scoreConsistency(deck, detected.archetype);
   const resilience = scoreResilience(deck, detected.archetype);
-  const interaction = makeStubAxis();
+  const interaction = scoreInteraction(deck, detected.archetype);
   const speed = makeStubAxis();
 
   const overall = Math.round((

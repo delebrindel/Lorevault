@@ -46,9 +46,7 @@ describe("scoreDeck", () => {
 
     expect(report.axes.consistency.grade).toBeDefined();
     expect(report.axes.resilience.grade).toBeDefined();
-    expect(report.axes.interaction.notes).toEqual([
-      "Not implemented yet in this backend slice.",
-    ]);
+    expect(report.axes.interaction.grade).toBeDefined();
     expect(report.axes.speed.notes).toEqual([
       "Not implemented yet in this backend slice.",
     ]);
@@ -59,15 +57,19 @@ describe("scoreDeck", () => {
     expect(Number.isNaN(Date.parse(report.generatedAt))).toBe(false);
   });
 
-  it("keeps the full-report contract while consistency and resilience are implemented", () => {
+  it("keeps the full-report contract while consistency, resilience, and interaction are implemented", () => {
     const report = scoreDeck(makeDeck(), { archetypeOverride: "control" });
 
     expect(report.axes.consistency.subMetrics.length).toBeGreaterThan(0);
     expect(report.axes.resilience.subMetrics.length).toBeGreaterThan(0);
-    expect(report.axes.interaction.score).toBe(0);
+    expect(report.axes.interaction.subMetrics.length).toBeGreaterThan(0);
     expect(report.axes.speed.score).toBe(0);
     expect(report.overall).toBe(
-      Math.round((report.axes.consistency.score + report.axes.resilience.score) / 4),
+      Math.round((
+        report.axes.consistency.score +
+        report.axes.resilience.score +
+        report.axes.interaction.score
+      ) / 4),
     );
   });
 });
