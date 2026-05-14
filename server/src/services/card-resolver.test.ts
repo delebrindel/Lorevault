@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { resolveCard, clearCardCache } from "./card-resolver.js";
+import { clearScryfallCacheRows, createScryfallCache } from "./scryfall-cache.js";
 import type { Card, CollectionItem, OwnedLibrary, OwnedCard } from "../types.js";
 
 const TOKEN = "test-token";
@@ -94,11 +95,13 @@ describe("resolveCard", () => {
 
   beforeEach(() => {
     clearCardCache();
+    clearScryfallCacheRows();
     fetchSpy = vi.spyOn(globalThis, "fetch");
   });
 
   afterEach(() => {
     fetchSpy.mockRestore();
+    vi.useRealTimers();
   });
 
   it("returns the card from the owned library without calling fetch", async () => {
@@ -188,5 +191,138 @@ describe("resolveCard", () => {
     const result = await resolveCard("Sol Ring", { library: new Map(), token: TOKEN });
     expect(result?.name).toBe("Sol Ring");
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries once after a 429 response using Retry-After", async () => {
+    vi.useFakeTimers();
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response("rate limited", {
+          status: 429,
+          statusText: "Too Many Requests",
+          headers: { "Retry-After": "1" },
+        }),
+      )
+      .mockResolvedValueOnce(scryfallCardResponse({ name: "Sol Ring" }));
+
+    const promise = resolveCard("Sol Ring", { library: new Map(), token: TOKEN });
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(999);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+    const result = await promise;
+
+    expect(result?.name).toBe("Sol Ring");
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("paces sequential Scryfall requests to avoid burst rate limits", async () => {
+    vi.useFakeTimers();
+    fetchSpy
+      .mockResolvedValueOnce(scryfallCardResponse({ name: "First Card" }))
+      .mockResolvedValueOnce(scryfallCardResponse({ name: "Second Card" }));
+
+    const first = await resolveCard("First Card", { library: new Map(), token: TOKEN });
+    expect(first?.name).toBe("First Card");
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    const secondPromise = resolveCard("Second Card", { library: new Map(), token: TOKEN });
+
+    await vi.advanceTimersByTimeAsync(109);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+    const second = await secondPromise;
+
+    expect(second?.name).toBe("Second Card");
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns a cached hit without calling Scryfall", async () => {
+    const cache = createScryfallCache({ missTtlMs: 7 * 24 * 60 * 60 * 1000 });
+    cache.storeHit({
+      requestedName: "Cache Hit Test Card",
+      resolutionMode: "exact",
+      card: makeCard({ name: "Cache Hit Test Card" }),
+      nowIso: "2026-05-13T12:00:00.000Z",
+    });
+
+    const result = await resolveCard("Cache Hit Test Card", { library: new Map(), token: TOKEN });
+
+    expect(result?.name).toBe("Cache Hit Test Card");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns null for a fresh cached miss without calling Scryfall", async () => {
+    const cache = createScryfallCache({ missTtlMs: 7 * 24 * 60 * 60 * 1000 });
+    cache.storeMiss({
+      requestedName: "Fresh Cached Miss Test Card",
+      nowIso: new Date().toISOString(),
+    });
+
+    const result = await resolveCard("Fresh Cached Miss Test Card", { library: new Map(), token: TOKEN });
+
+    expect(result).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("refreshes a stale cached miss via live Scryfall", async () => {
+    const cache = createScryfallCache({ missTtlMs: 1_000 });
+    cache.storeMiss({
+      requestedName: "Stale Cached Miss Test Card",
+      nowIso: "2026-05-13T12:00:00.000Z",
+    });
+
+    fetchSpy.mockResolvedValueOnce(scryfallCardResponse({ name: "Stale Cached Miss Test Card" }));
+
+    const result = await resolveCard("Stale Cached Miss Test Card", {
+      library: new Map(),
+      token: TOKEN,
+    });
+
+    expect(result?.name).toBe("Stale Cached Miss Test Card");
+    expect(fetchSpy).toHaveBeenCalled();
+  });
+
+  it("returns a collection-cache hit without calling Scryfall", async () => {
+    const cache = createScryfallCache({ missTtlMs: 7 * 24 * 60 * 60 * 1000 });
+    cache.upsertCollectionCard({
+      cardNameExact: "Collection Cached Card",
+      card: makeCard({ name: "Collection Cached Card" }),
+      quantityTotal: 2,
+      finish: "Normal",
+      sourceSetCode: "set",
+      sourceCollectorNumber: "1",
+      nowIso: "2026-05-13T12:00:00.000Z",
+    });
+
+    const result = await resolveCard("Collection Cached Card", { library: new Map(), token: TOKEN });
+
+    expect(result?.name).toBe("Collection Cached Card");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not use collection cache for non-exact names", async () => {
+    const cache = createScryfallCache({ missTtlMs: 7 * 24 * 60 * 60 * 1000 });
+    cache.upsertCollectionCard({
+      cardNameExact: "Sol Ring",
+      card: makeCard({ name: "Sol Ring" }),
+      quantityTotal: 1,
+      finish: "Normal",
+      sourceSetCode: "set",
+      sourceCollectorNumber: "1",
+      nowIso: "2026-05-13T12:00:00.000Z",
+    });
+
+    fetchSpy.mockResolvedValueOnce(scryfallCardResponse({ name: "sol ring" }));
+
+    const result = await resolveCard("sol ring", { library: new Map(), token: TOKEN });
+
+    expect(result?.name).toBe("sol ring");
+    expect(fetchSpy).toHaveBeenCalled();
   });
 });

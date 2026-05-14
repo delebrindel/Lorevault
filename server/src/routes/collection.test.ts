@@ -14,7 +14,8 @@ vi.mock("../services/library.js", () => ({
 
 import { collection, filterByColorIdentity, mapCardResponse } from "./collection.js";
 import { getOwnedLibrary, MoxfieldError } from "../services/library.js";
-import type { CollectionItem, Card, MtgColor } from "../types.js";
+import { clearScryfallCacheRows, createScryfallCache } from "../services/scryfall-cache.js";
+import type { CollectionItem, Card, MtgColor, OwnedCard, OwnedLibrary } from "../types.js";
 
 /** Helper to build a minimal CollectionItem for testing. */
 function makeItem(
@@ -165,6 +166,7 @@ describe("POST /api/collection (route wiring)", () => {
   const mockGet = getOwnedLibrary as unknown as ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    clearScryfallCacheRows();
     mockGet.mockReset();
     process.env.MOXFIELD_TOKEN = "test-token";
     mockGet.mockResolvedValue({ library: new Map(), totalResults: 0 });
@@ -207,5 +209,71 @@ describe("POST /api/collection (route wiring)", () => {
     expect(res.status).toBe(401);
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain("Invalid or expired auth token");
+  });
+
+  it("warms the collection cache while preserving the response shape", async () => {
+    const item = makeItem({ color_identity: [], name: "Sol Ring", set: "cmd", set_name: "Commander" }, 2, "Foil");
+    item.card.cn = "217";
+
+    const library: OwnedLibrary = new Map<string, OwnedCard>([
+      ["Sol Ring", { name: "Sol Ring", printings: [item], totalQty: 2 }],
+    ]);
+
+    mockGet.mockResolvedValueOnce({ library, totalResults: 1 });
+
+    const res = await collection.request("/", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ colors: [], colorless: true }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      totalResults: number;
+      filteredCount: number;
+      cards: Array<{ name: string; quantity: number; finish: string }>;
+    };
+    expect(body.totalResults).toBe(1);
+    expect(body.filteredCount).toBe(1);
+    expect(body.cards[0]).toEqual(expect.objectContaining({ name: "Sol Ring", quantity: 2, finish: "Foil" }));
+
+    const cache = createScryfallCache({ missTtlMs: 7 * 24 * 60 * 60 * 1000 });
+    expect(cache.lookupCollectionCard("Sol Ring")).toEqual(
+      expect.objectContaining({
+        kind: "collection-hit",
+        quantityTotal: 2,
+        finish: "Foil",
+        sourceSetCode: "cmd",
+        sourceCollectorNumber: "217",
+      }),
+    );
+  });
+
+  it("uses the aggregate owned quantity when warming duplicate-name collection rows", async () => {
+    const first = makeItem({ color_identity: [], name: "Arcane Signet", set: "ncc" }, 1, "Normal");
+    const second = makeItem({ color_identity: [], name: "Arcane Signet", set: "clb" }, 2, "Foil");
+    second.card.cn = "300";
+
+    const library: OwnedLibrary = new Map<string, OwnedCard>([
+      ["Arcane Signet", { name: "Arcane Signet", printings: [first, second], totalQty: 3 }],
+    ]);
+
+    mockGet.mockResolvedValueOnce({ library, totalResults: 2 });
+
+    const res = await collection.request("/", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ colors: [], colorless: true }),
+    });
+
+    expect(res.status).toBe(200);
+
+    const cache = createScryfallCache({ missTtlMs: 7 * 24 * 60 * 60 * 1000 });
+    expect(cache.lookupCollectionCard("Arcane Signet")).toEqual(
+      expect.objectContaining({
+        kind: "collection-hit",
+        quantityTotal: 3,
+      }),
+    );
   });
 });

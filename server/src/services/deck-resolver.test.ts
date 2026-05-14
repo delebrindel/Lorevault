@@ -100,6 +100,7 @@ describe("resolveDeck", () => {
 
   afterEach(() => {
     fetchSpy.mockRestore();
+    vi.useRealTimers();
   });
 
   it("resolves commander and mainboard from owned library only", async () => {
@@ -245,5 +246,46 @@ describe("resolveDeck", () => {
     expect(result.ownedMap.size).toBe(1);
     const sol = result.mainboard.find((m) => m.card.name === "Sol Ring")!.card;
     expect(result.ownedMap.get(sol.scryfall_id)).toBe(3);
+  });
+
+  it("starts later Scryfall misses before earlier delayed misses finish", async () => {
+    vi.useFakeTimers();
+
+    fetchSpy.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/collections/search")) {
+        return Promise.resolve(libraryPageResponse([]));
+      }
+      if (url.includes("api.scryfall.com")) {
+        const name = url.includes("First%20Miss") ? "First Miss" : "Second Miss";
+        return new Promise<Response>((resolve) => {
+          setTimeout(() => resolve(scryfallCardResponse(makeCard(name))), 200);
+        });
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+
+    const parsed: ParsedDeck = {
+      source: "manual",
+      commander: [],
+      mainboard: [
+        { name: "First Miss", qty: 1 },
+        { name: "Second Miss", qty: 1 },
+      ],
+      unresolved: [],
+    };
+
+    const promise = resolveDeck(parsed, { token: TOKEN });
+
+    await vi.advanceTimersByTimeAsync(109);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+
+    await vi.advanceTimersByTimeAsync(200);
+    const result = await promise;
+
+    expect(result.mainboard.map((entry) => entry.card.name)).toEqual(["First Miss", "Second Miss"]);
   });
 });

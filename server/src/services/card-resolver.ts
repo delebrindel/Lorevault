@@ -1,11 +1,18 @@
 import type { Card, OwnedLibrary } from "../types.js";
 import { MoxfieldError } from "./library.js";
+import { createScryfallCache } from "./scryfall-cache.js";
 
 const SCRYFALL_NAMED_API = "https://api.scryfall.com/cards/named";
+const SCRYFALL_MIN_INTERVAL_MS = 110;
+const SCRYFALL_MAX_429_RETRIES = 1;
+const SCRYFALL_DEFAULT_RETRY_MS = 1_000;
+const SCRYFALL_MISS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 // Process-lifetime cache. Indefinite TTL — Oracle text is stable.
 // Key = exact requested card name (case-sensitive). Value = Card or null (negative cache).
 const cardCache = new Map<string, Card | null>();
+const scryfallCache = createScryfallCache({ missTtlMs: SCRYFALL_MISS_TTL_MS });
+let nextScryfallRequestAt = 0;
 
 /**
  * Verified against live Scryfall probes on 2026-05-12:
@@ -44,9 +51,40 @@ interface ScryfallCardLike {
   };
 }
 
-/** Test-only: drop the entire card cache. */
+/** Test-only: drop the entire card cache and pacing state. */
 export function clearCardCache(): void {
   cardCache.clear();
+  nextScryfallRequestAt = 0;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForScryfallSlot(): Promise<void> {
+  const now = Date.now();
+  const waitMs = Math.max(0, nextScryfallRequestAt - now);
+  if (waitMs > 0) {
+    await sleep(waitMs);
+  }
+  nextScryfallRequestAt = Date.now() + SCRYFALL_MIN_INTERVAL_MS;
+}
+
+function getRetryAfterMs(response: Response): number {
+  const header = response.headers.get("Retry-After");
+  if (!header) return SCRYFALL_DEFAULT_RETRY_MS;
+
+  const seconds = Number(header);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds * 1000;
+  }
+
+  const retryAt = Date.parse(header);
+  if (Number.isFinite(retryAt)) {
+    return Math.max(0, retryAt - Date.now());
+  }
+
+  return SCRYFALL_DEFAULT_RETRY_MS;
 }
 
 function toNumber(value?: string | null): number | undefined {
@@ -88,55 +126,72 @@ function mapScryfallCard(card: ScryfallCardLike): Card {
 async function fetchNamed(name: string, mode: "exact" | "fuzzy"): Promise<Card | null> {
   const url = `${SCRYFALL_NAMED_API}?${mode}=${encodeURIComponent(name)}`;
 
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "lorevault/1.0",
-      },
-      redirect: "follow",
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown network error";
-    throw new MoxfieldError(`Failed to reach Scryfall API: ${message}`, 502);
+  for (let attempt = 0; attempt <= SCRYFALL_MAX_429_RETRIES; attempt++) {
+    await waitForScryfallSlot();
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "lorevault/1.0",
+        },
+        redirect: "follow",
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown network error";
+      throw new MoxfieldError(`Failed to reach Scryfall API: ${message}`, 502);
+    }
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (response.status === 429 && attempt < SCRYFALL_MAX_429_RETRIES) {
+      await sleep(getRetryAfterMs(response));
+      continue;
+    }
+
+    if (!response.ok) {
+      throw new MoxfieldError(
+        `Scryfall API error: ${response.status} ${response.statusText}`,
+        502,
+      );
+    }
+
+    let data: unknown;
+    try {
+      data = await response.json();
+    } catch {
+      throw new MoxfieldError("Scryfall API returned invalid JSON", 502);
+    }
+
+    if (!data || typeof data !== "object" || (data as { object?: string }).object !== "card") {
+      throw new MoxfieldError("Unexpected response structure from Scryfall API", 502);
+    }
+
+    return mapScryfallCard(data as ScryfallCardLike);
   }
 
-  if (response.status === 404) {
-    return null;
-  }
-
-  if (!response.ok) {
-    throw new MoxfieldError(
-      `Scryfall API error: ${response.status} ${response.statusText}`,
-      502,
-    );
-  }
-
-  let data: unknown;
-  try {
-    data = await response.json();
-  } catch {
-    throw new MoxfieldError("Scryfall API returned invalid JSON", 502);
-  }
-
-  if (!data || typeof data !== "object" || (data as { object?: string }).object !== "card") {
-    throw new MoxfieldError("Unexpected response structure from Scryfall API", 502);
-  }
-
-  return mapScryfallCard(data as ScryfallCardLike);
+  throw new MoxfieldError("Scryfall API error: 429 Too Many Requests", 502);
 }
 
-async function searchScryfall(name: string): Promise<Card | null> {
+async function searchScryfall(
+  name: string,
+): Promise<{ card: Card | null; resolutionMode: "exact" | "fuzzy" | null }> {
   const exact = await fetchNamed(name, "exact");
-  if (exact) return exact;
-  return fetchNamed(name, "fuzzy");
+  if (exact) return { card: exact, resolutionMode: "exact" };
+
+  const fuzzy = await fetchNamed(name, "fuzzy");
+  if (fuzzy) return { card: fuzzy, resolutionMode: "fuzzy" };
+
+  return { card: null, resolutionMode: null };
 }
 
 /**
  * Resolve a card name to a `Card`, or `null` if unresolvable.
- * Lookup order: owned library → process cache → Scryfall exact/fuzzy lookup.
+ * Lookup order: owned library → collection cache → process cache → SQLite Scryfall cache → live Scryfall.
  */
 export async function resolveCard(
   name: string,
@@ -147,11 +202,57 @@ export async function resolveCard(
     return owned.printings[0].card;
   }
 
+  const collectionCached = scryfallCache.lookupCollectionCard(name);
+  if (collectionCached) {
+    console.log(`[collection-cache] hit ${name}`);
+    cardCache.set(name, collectionCached.card);
+    return collectionCached.card;
+  }
+
   if (cardCache.has(name)) {
     return cardCache.get(name) ?? null;
   }
 
+  const nowIso = new Date().toISOString();
+  const cached = scryfallCache.lookup(name, nowIso);
+
+  if (cached?.kind === "hit") {
+    console.log(`[scryfall-cache] hit ${name} (${cached.source})`);
+    cardCache.set(name, cached.card);
+    return cached.card;
+  }
+
+  if (cached?.kind === "miss" && !cached.stale) {
+    console.log(`[scryfall-cache] miss ${name} (fresh)`);
+    cardCache.set(name, null);
+    return null;
+  }
+
+  if (cached?.kind === "miss" && cached.stale) {
+    console.log(`[scryfall-cache] miss ${name} (stale -> refresh)`);
+  } else {
+    console.log(`[scryfall-cache] miss ${name} (lookup)`);
+  }
+
   const found = await searchScryfall(name);
-  cardCache.set(name, found);
-  return found;
+
+  if (found.card) {
+    scryfallCache.storeHit({
+      requestedName: name,
+      resolutionMode: found.resolutionMode ?? "exact",
+      card: found.card,
+      nowIso: new Date().toISOString(),
+    });
+    console.log(`[scryfall-cache] store hit ${name} (${found.resolutionMode})`);
+    cardCache.set(name, found.card);
+    return found.card;
+  }
+
+  scryfallCache.storeMiss({
+    requestedName: name,
+    nowIso: new Date().toISOString(),
+  });
+  console.log(`[scryfall-cache] store miss ${name}`);
+  cardCache.set(name, null);
+  return null;
 }

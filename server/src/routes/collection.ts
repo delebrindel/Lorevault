@@ -1,7 +1,8 @@
 import { Hono } from "hono";
-import type { CollectionItem, MtgColor } from "../types.js";
+import type { CollectionItem, MtgColor, OwnedLibrary } from "../types.js";
 import { MTG_COLORS } from "../types.js";
 import { getOwnedLibrary, MoxfieldError } from "../services/library.js";
+import { createScryfallCache } from "../services/scryfall-cache.js";
 
 const VALID_COLORS = new Set<string>(Object.keys(MTG_COLORS));
 const DEFAULT_FINISH = "Normal";
@@ -52,6 +53,7 @@ export function mapCardResponse(item: CollectionItem) {
 }
 
 const collection = new Hono();
+const scryfallCache = createScryfallCache({ missTtlMs: 7 * 24 * 60 * 60 * 1000 });
 
 /**
  * POST /api/collection
@@ -97,9 +99,11 @@ collection.post("/", async (c) => {
 
   let totalResults: number;
   let allItems: CollectionItem[];
+  let library: OwnedLibrary;
   try {
-    const { library, totalResults: t } = await getOwnedLibrary({ token, refresh });
-    totalResults = t;
+    const result = await getOwnedLibrary({ token, refresh });
+    library = result.library;
+    totalResults = result.totalResults;
     allItems = [];
     for (const owned of library.values()) {
       allItems.push(...owned.printings);
@@ -111,6 +115,26 @@ collection.post("/", async (c) => {
     const message = err instanceof Error ? err.message : "Unknown error";
     return c.json({ error: message }, 502);
   }
+
+  const nowIso = new Date().toISOString();
+  const seenNames = new Set<string>();
+  for (const item of allItems) {
+    const exactName = item.card.name;
+    if (seenNames.has(exactName)) continue;
+    seenNames.add(exactName);
+
+    const owned = library.get(exactName);
+    scryfallCache.upsertCollectionCard({
+      cardNameExact: exactName,
+      card: item.card,
+      quantityTotal: owned?.totalQty ?? item.quantity,
+      finish: item.finish != null ? String(item.finish) : null,
+      sourceSetCode: item.card.set,
+      sourceCollectorNumber: item.card.cn,
+      nowIso,
+    });
+  }
+  console.log(`[collection-cache] upsert batch ${seenNames.size}`);
 
   const filtered = filterByColorIdentity(allItems, colors, includeColorless);
 
